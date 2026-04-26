@@ -259,24 +259,22 @@ export default function Home() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-8">
-        {/* Usage indicator */}
         {!isSubscribed && (
-          <div className="mb-6 p-3 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-between">
-            <span className="text-sm text-pink-700">
-              {remainingFree > 0
-                ? `免费试用 ${remainingFree} 次，不绑卡`
-                : "试用次数已用完"}
-            </span>
-          </div>
-
-          {!isSubscribed && (
+          <>
+            <div className="mb-6 p-3 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-between">
+              <span className="text-sm text-pink-700">
+                {remainingFree > 0
+                  ? `免费试用 ${remainingFree} 次，不绑卡`
+                  : "试用次数已用完"}
+              </span>
+            </div>
             <button
               onClick={() => setShowPaywall(true)}
               className="w-full py-3 bg-pink-500 text-white rounded-xl font-medium text-base hover:bg-pink-600 transition-colors mb-6"
             >
               解锁 Pro，无限用 →
             </button>
-          )}
+          </>
         )}
 
         {/* Their Message Input */}
