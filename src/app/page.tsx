@@ -1,65 +1,212 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef } from "react";
+import { ReplyOption } from "@/lib/api";
+
+const CONTEXTS = [
+  "刚认识，还在试探",
+  "约会1-2次后",
+  "暧昧期",
+  "朋友刚变成恋人",
+  "不确定关系进展",
+];
+
+const CONTEXT_LABELS: Record<string, string> = {
+  "刚认识，还在试探": "刚认识，还在试探阶段，不想显得太热情",
+  "约会1-2次后": "约会了1-2次，有点感觉但不确定对方",
+  "暧昧期": "暧昧期，想推进但怕太主动",
+  "朋友刚变成恋人": "刚确定关系，还在适应",
+  "不确定关系进展": "不确定现在是什么阶段",
+};
 
 export default function Home() {
+  const [theirMessage, setTheirMessage] = useState("");
+  const [context, setContext] = useState<string>("约会1-2次后");
+  const [options, setOptions] = useState<ReplyOption[]>([]);
+  const [selectedOption, setSelectedOption] = useState<ReplyOption | null>(null);
+  const [customReply, setCustomReply] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showContext, setShowContext] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleGenerate = async () => {
+    if (!theirMessage.trim()) return;
+
+    setLoading(true);
+    setOptions([]);
+    setSelectedOption(null);
+    setCustomReply("");
+
+    try {
+      const res = await fetch("/api/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theirMessage, context }),
+      });
+
+      const data = await res.json();
+      if (data.options) {
+        setOptions(data.options);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleUseThis = (option: ReplyOption) => {
+    setSelectedOption(option);
+    setCustomReply(option.text);
+  };
+
+  const finalReply = customReply || selectedOption?.text || "";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 to-white">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-lg mx-auto px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">💬 约会短信助手</h1>
+          <p className="text-sm text-gray-500 mt-1">不知道怎么回？给你3个选择</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      <div className="max-w-lg mx-auto px-6 py-8">
+        {/* Their Message Input */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            他们发的是...
+          </label>
+          <textarea
+            ref={textareaRef}
+            value={theirMessage}
+            onChange={(e) => setTheirMessage(e.target.value)}
+            placeholder="粘贴对方发来的短信..."
+            className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 text-base"
+            rows={3}
+          />
+        </div>
+
+        {/* Context Selector */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowContext(!showContext)}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <span>📌</span>
+            <span>{CONTEXT_LABELS[context] || "选择关系阶段"}</span>
+            <span className="text-gray-400">{showContext ? "▲" : "▼"}</span>
+          </button>
+
+          {showContext && (
+            <div className="mt-3 p-4 bg-white border border-gray-200 rounded-2xl space-y-2">
+              {Object.entries(CONTEXT_LABELS).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setContext(key);
+                    setShowContext(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                    context === key
+                      ? "bg-pink-100 text-pink-700"
+                      : "hover:bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Generate Button */}
+        <button
+          onClick={handleGenerate}
+          disabled={!theirMessage.trim() || loading}
+          className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-8"
+        >
+          {loading ? "🤔 思考中..." : "✨ 给我建议"}
+        </button>
+
+        {/* Reply Options */}
+        {options.length > 0 && (
+          <div className="space-y-3 mb-6">
+            <h3 className="text-sm font-medium text-gray-700">3个回复建议：</h3>
+            {options.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleUseThis(option)}
+                className={`w-full p-4 bg-white border-2 rounded-2xl text-left transition-all ${
+                  selectedOption === option
+                    ? "border-pink-500 bg-pink-50"
+                    : "border-gray-200 hover:border-pink-300"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{option.emoji}</span>
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-500 mb-1">{option.style}</div>
+                    <p className="text-gray-800">{option.text}</p>
+                  </div>
+                  {selectedOption === option && (
+                    <span className="text-pink-500 font-medium text-sm">已选</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Custom Reply */}
+        {options.length > 0 && (
+          <div className="mb-6">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              或自己改改...
+            </label>
+            <textarea
+              value={customReply}
+              onChange={(e) => {
+                setCustomReply(e.target.value);
+                setSelectedOption(null);
+              }}
+              placeholder="在这里修改你的回复..."
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 text-base"
+              rows={2}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+        )}
+
+        {/* Copy/Copy and Send */}
+        {finalReply && (
+          <div className="space-y-3">
+            <div className="p-4 bg-gray-100 rounded-2xl">
+              <div className="text-xs text-gray-500 mb-1">你的回复：</div>
+              <p className="text-gray-800 font-medium">{finalReply}</p>
+            </div>
+
+            <button
+              onClick={() => copyToClipboard(finalReply)}
+              className="w-full py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-colors"
+            >
+              {copied ? "✓ 已复制" : "📋 复制"}
+            </button>
+          </div>
+        )}
+
+        {/* Privacy Note */}
+        <p className="text-center text-xs text-gray-400 mt-8">
+          🔒 阅后即焚，不保存记录，不用于训练
+        </p>
+      </div>
+    </main>
   );
 }
