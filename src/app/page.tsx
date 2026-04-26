@@ -36,7 +36,7 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
         <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-6 text-white text-center">
           <div className="text-4xl mb-2">💬</div>
-          <h2 className="text-xl font-bold">帮她回这条消息</h2>
+          <h2 className="text-xl font-bold">你已经用完了5次</h2>
           <p className="text-pink-100 text-sm mt-1">你已用完 {FREE_USES_LIMIT} 次免费机会</p>
         </div>
 
@@ -60,7 +60,7 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
             className="w-full py-4 bg-pink-500 text-white rounded-2xl text-left px-5 hover:bg-pink-600 transition-colors relative disabled:opacity-50"
           >
             <span className="absolute top-3 right-4 bg-white text-pink-500 text-xs font-bold px-2 py-0.5 rounded-full">
-              省 $30
+              省 $60
             </span>
             <div className="font-semibold">年付 $59.99</div>
             <div className="text-xs text-pink-100 mt-0.5">每月 $5，随时取消</div>
@@ -72,6 +72,10 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
           >
             暂不升级
           </button>
+
+          <p className="text-center text-xs text-gray-400 mt-2">
+            订阅包含所有功能，无隐藏费用。取消后当前周期内仍可使用。
+          </p>
         </div>
       </div>
     </div>
