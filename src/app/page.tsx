@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ReplyOption } from "@/lib/api";
 
 const CONTEXT_LABELS: Record<string, string> = {
@@ -11,12 +11,72 @@ const CONTEXT_LABELS: Record<string, string> = {
   "第一次约会前紧张": "第一次约会前紧张，想准备好说什么",
 };
 
-// Demo responses for testing without API key
 const DEMO_RESPONSES: ReplyOption[] = [
   { style: "自信有趣", emoji: "😏", text: "看来你终于被我的魅力吸引了～" },
   { style: "温柔确认", emoji: "😊", text: "我也玩得很开心，期待下次见～" },
   { style: "简洁酷", emoji: "👍", text: "嗯，周末见" },
 ];
+
+// Replace with your actual Stripe price IDs
+const PRICE_MONTHLY = process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY ?? "price_monthly_placeholder";
+const PRICE_YEARLY = process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY ?? "price_yearly_placeholder";
+const FREE_USES_LIMIT = 3;
+const USES_KEY = "date-reply-uses";
+const SUBSCRIBED_KEY = "date-reply-subscribed";
+
+interface SubscriptionModalProps {
+  onClose: () => void;
+  onSubscribe: (priceId: string) => Promise<void>;
+  subscribing: boolean;
+}
+
+function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+      <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-6 text-white text-center">
+          <div className="text-4xl mb-2">✨</div>
+          <h2 className="text-xl font-bold">升级 Pro 继续使用</h2>
+          <p className="text-pink-100 text-sm mt-1">你已用完 {FREE_USES_LIMIT} 次免费机会</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-gray-600 text-sm text-center">
+            Pro 模式无限生成回复建议，让约会更顺利 💕
+          </p>
+
+          <button
+            onClick={() => onSubscribe(PRICE_MONTHLY)}
+            disabled={subscribing}
+            className="w-full py-4 border-2 border-pink-500 rounded-2xl text-left px-5 hover:bg-pink-50 transition-colors disabled:opacity-50"
+          >
+            <div className="font-semibold text-gray-800">月付 $4.99</div>
+            <div className="text-xs text-gray-500 mt-0.5">每月续费，随时取消</div>
+          </button>
+
+          <button
+            onClick={() => onSubscribe(PRICE_YEARLY)}
+            disabled={subscribing}
+            className="w-full py-4 bg-pink-500 text-white rounded-2xl text-left px-5 hover:bg-pink-600 transition-colors relative disabled:opacity-50"
+          >
+            <span className="absolute top-3 right-4 bg-white text-pink-500 text-xs font-bold px-2 py-0.5 rounded-full">
+              省 $30
+            </span>
+            <div className="font-semibold">年付 $29</div>
+            <div className="text-xs text-pink-100 mt-0.5">相当于每月 $2.4</div>
+          </button>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2 text-sm text-gray-400 hover:text-gray-600"
+          >
+            暂不升级
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [theirMessage, setTheirMessage] = useState("");
@@ -28,10 +88,34 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [usesCount, setUsesCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const subscribed = localStorage.getItem(SUBSCRIBED_KEY) === "true";
+    setIsSubscribed(subscribed);
+    const stored = parseInt(localStorage.getItem(USES_KEY) ?? "0", 10);
+    setUsesCount(isNaN(stored) ? 0 : stored);
+
+    // Handle return from Stripe checkout
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("subscribed") === "true") {
+      localStorage.setItem(SUBSCRIBED_KEY, "true");
+      setIsSubscribed(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const handleGenerate = async () => {
     if (!theirMessage.trim()) return;
+
+    if (!isSubscribed && usesCount >= FREE_USES_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
 
     setLoading(true);
     setOptions([]);
@@ -39,10 +123,12 @@ export default function Home() {
     setCustomReply("");
 
     if (isDemoMode) {
-      // Demo mode - return fake responses
       await new Promise((r) => setTimeout(r, 1000));
       setOptions(DEMO_RESPONSES);
       setLoading(false);
+      const next = usesCount + 1;
+      setUsesCount(next);
+      localStorage.setItem(USES_KEY, String(next));
       return;
     }
 
@@ -56,11 +142,33 @@ export default function Home() {
       const data = await res.json();
       if (data.options) {
         setOptions(data.options);
+        const next = usesCount + 1;
+        setUsesCount(next);
+        localStorage.setItem(USES_KEY, String(next));
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (priceId: string) => {
+    setSubscribing(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -76,9 +184,18 @@ export default function Home() {
   };
 
   const finalReply = customReply || selectedOption?.text || "";
+  const remainingFree = Math.max(0, FREE_USES_LIMIT - usesCount);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 to-white">
+      {showPaywall && (
+        <SubscriptionModal
+          onClose={() => setShowPaywall(false)}
+          onSubscribe={handleSubscribe}
+          subscribing={subscribing}
+        />
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-6 py-4">
@@ -88,6 +205,23 @@ export default function Home() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-8">
+        {/* Usage indicator */}
+        {!isSubscribed && (
+          <div className="mb-6 p-3 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-between">
+            <span className="text-sm text-pink-700">
+              {remainingFree > 0
+                ? `还有 ${remainingFree} 次免费机会`
+                : "免费次数已用完"}
+            </span>
+            <button
+              onClick={() => setShowPaywall(true)}
+              className="text-xs text-pink-500 font-medium hover:text-pink-700"
+            >
+              升级 Pro →
+            </button>
+          </div>
+        )}
+
         {/* Demo Mode Toggle */}
         <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
           <label className="flex items-center gap-3 cursor-pointer">
@@ -209,7 +343,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Copy/Copy and Send */}
+        {/* Copy */}
         {finalReply && (
           <div className="space-y-3">
             <div className="p-4 bg-gray-100 rounded-2xl">
