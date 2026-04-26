@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
   const stripe = getStripe();
   let event: Stripe.Event;
   try {
-    console.log("Webhook received - body length:", body.length, "sig:", sig ? sig.substring(0, 50) + "..." : "none", "secret len:", (process.env.STRIPE_WEBHOOK_SECRET || "").length);
     event = stripe.webhooks.constructEvent(
       body,
       sig,

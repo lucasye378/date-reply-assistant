@@ -26,7 +26,15 @@ const SUBSCRIBED_KEY = "date-reply-subscribed";
 
 // Payment flow tracking
 const trackPayment = (event: string, metadata?: Record<string, string>) => {
-  const payload = { event, feature: "payment_flow", ...metadata, ts: Date.now() };
+  const payload = {
+    event,
+    feature: "payment_flow",
+    utm_source: localStorage.getItem("utm_source") || undefined,
+    utm_medium: localStorage.getItem("utm_medium") || undefined,
+    utm_campaign: localStorage.getItem("utm_campaign") || undefined,
+    ...metadata,
+    ts: Date.now(),
+  };
   console.log("[PAYMENT_TRACK]", payload);
   localStorage.setItem("payment_event", JSON.stringify(payload));
 };
@@ -119,8 +127,18 @@ export default function Home() {
     const stored = parseInt(localStorage.getItem(USES_KEY) ?? "0", 10);
     setUsesCount(isNaN(stored) ? 0 : stored);
 
-    // Handle return from Stripe checkout
+    // Capture UTM params on first visit
     const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get("utm_source");
+    const utmMedium = params.get("utm_medium");
+    const utmCampaign = params.get("utm_campaign");
+    if (utmSource && !localStorage.getItem("utm_source")) {
+      localStorage.setItem("utm_source", utmSource);
+      localStorage.setItem("utm_medium", utmMedium || "");
+      localStorage.setItem("utm_campaign", utmCampaign || "");
+    }
+
+    // Handle return from Stripe checkout
     if (params.get("subscribed") === "true") {
       localStorage.setItem(SUBSCRIBED_KEY, "true");
       setIsSubscribed(true);
@@ -172,7 +190,7 @@ export default function Home() {
     }
   };
 
-  const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gMaEX4Eg0do394ayWcjS04";
+  const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gM00j4Eg5xIbFAayWcjS0a";
   const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_eVqfZhfiUaS29xs4aycjS09";
 
   const track = (event: string, metadata?: Record<string, string>) => {
@@ -257,22 +275,6 @@ export default function Home() {
             </button>
           </div>
         )}
-
-        {/* Demo Mode Toggle */}
-        <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isDemoMode}
-              onChange={(e) => setIsDemoMode(e.target.checked)}
-              className="w-5 h-5 rounded border-gray-300"
-            />
-            <div>
-              <span className="text-sm font-medium text-yellow-800">测试模式（无需 API key）</span>
-              <p className="text-xs text-yellow-600">勾选后使用示例回复，方便测试 UI</p>
-            </div>
-          </label>
-        </div>
 
         {/* Their Message Input */}
         <div className="mb-6">
