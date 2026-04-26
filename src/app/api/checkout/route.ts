@@ -27,10 +27,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Checkout session error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Checkout session error:", message);
     return NextResponse.json(
-      { error: "Failed to create checkout session" },
+      { error: "Failed to create checkout session", details: message },
       { status: 500 }
     );
   }
-}
+  }

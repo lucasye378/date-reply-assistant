@@ -35,14 +35,14 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
         <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-6 text-white text-center">
-          <div className="text-4xl mb-2">✨</div>
-          <h2 className="text-xl font-bold">升级 Pro 继续使用</h2>
+          <div className="text-4xl mb-2">💬</div>
+          <h2 className="text-xl font-bold">帮她回这条消息</h2>
           <p className="text-pink-100 text-sm mt-1">你已用完 {FREE_USES_LIMIT} 次免费机会</p>
         </div>
 
         <div className="p-6 space-y-4">
           <p className="text-gray-600 text-sm text-center">
-            Pro 模式无限生成回复建议，让约会更顺利 💕
+            无限次生成回复建议，让约会更顺利 💕
           </p>
 
           <button
@@ -50,8 +50,8 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
             disabled={subscribing}
             className="w-full py-4 border-2 border-pink-500 rounded-2xl text-left px-5 hover:bg-pink-50 transition-colors disabled:opacity-50"
           >
-            <div className="font-semibold text-gray-800">月付 $4.99</div>
-            <div className="text-xs text-gray-500 mt-0.5">每月续费，随时取消</div>
+            <div className="font-semibold text-gray-800">月付 $9.99</div>
+            <div className="text-xs text-gray-500 mt-0.5">随时取消，让约会更顺</div>
           </button>
 
           <button
@@ -62,8 +62,8 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
             <span className="absolute top-3 right-4 bg-white text-pink-500 text-xs font-bold px-2 py-0.5 rounded-full">
               省 $30
             </span>
-            <div className="font-semibold">年付 $29</div>
-            <div className="text-xs text-pink-100 mt-0.5">相当于每月 $2.4</div>
+            <div className="font-semibold">年付 $59.99</div>
+            <div className="text-xs text-pink-100 mt-0.5">每月 $5，随时取消</div>
           </button>
 
           <button
@@ -153,23 +153,13 @@ export default function Home() {
     }
   };
 
+  const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gMaEX4Eg0do394ayWcjS04";
+  const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_dRm4gz5Ik6BM4d86iGcjS05";
+
   const handleSubscribe = async (priceId: string) => {
     setSubscribing(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err) {
-      console.error("Checkout error:", err);
-    } finally {
-      setSubscribing(false);
-    }
+    const url = priceId === PRICE_MONTHLY ? PAYMENT_LINK_MONTHLY : PAYMENT_LINK_YEARLY;
+    window.location.href = url;
   };
 
   const copyToClipboard = (text: string) => {
@@ -217,7 +207,7 @@ export default function Home() {
               onClick={() => setShowPaywall(true)}
               className="text-xs text-pink-500 font-medium hover:text-pink-700"
             >
-              升级 Pro →
+              解锁无限次 →
             </button>
           </div>
         )}
