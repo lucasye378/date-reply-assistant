@@ -51,8 +51,8 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
         <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-6 text-white text-center">
           <div className="text-4xl mb-2">💬</div>
-          <h2 className="text-xl font-bold">你已经用完了5次</h2>
-          <p className="text-pink-100 text-sm mt-1">你已用完 {FREE_USES_LIMIT} 次免费机会</p>
+          <h2 className="text-xl font-bold">试用次数已用完</h2>
+          <p className="text-pink-100 text-sm mt-1">解锁 Pro，无限次使用</p>
         </div>
 
         <div className="p-6 space-y-4">
@@ -264,14 +264,14 @@ export default function Home() {
           <div className="mb-6 p-3 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-between">
             <span className="text-sm text-pink-700">
               {remainingFree > 0
-                ? `还有 ${remainingFree} 次免费机会`
-                : "免费次数已用完"}
+                ? `免费试用 ${remainingFree} 次，不绑卡`
+                : "试用次数已用完"}
             </span>
             <button
               onClick={() => setShowPaywall(true)}
               className="text-xs text-pink-500 font-medium hover:text-pink-700"
             >
-              解锁无限次 →
+              解锁 Pro，无限用 →
             </button>
           </div>
         )}
