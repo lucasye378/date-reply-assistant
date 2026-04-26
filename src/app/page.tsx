@@ -158,7 +158,7 @@ export default function Home() {
   };
 
   const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gMaEX4Eg0do394ayWcjS04";
-  const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_dRm4gz5Ik6BM4d86iGcjS05";
+  const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_eVqfZhfiUaS29xs4aycjS09";
 
   const handleSubscribe = async (priceId: string) => {
     setSubscribing(true);
@@ -166,10 +166,30 @@ export default function Home() {
     window.location.href = url;
   };
 
+  const [whatsappSent, setWhatsappSent] = useState(false);
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    // Track copy action
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "copy", feature: "FeatureA" }),
+    }).catch(() => {});
+  };
+
+  const sendToWhatsApp = (text: string) => {
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, "_blank");
+    setWhatsappSent(true);
+    // Track WhatsApp send
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "whatsapp", feature: "FeatureA" }),
+    }).catch(() => {});
   };
 
   const handleUseThis = (option: ReplyOption) => {
@@ -337,7 +357,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Copy */}
+        {/* Copy + WhatsApp */}
         {finalReply && (
           <div className="space-y-3">
             <div className="p-4 bg-gray-100 rounded-2xl">
@@ -345,12 +365,20 @@ export default function Home() {
               <p className="text-gray-800 font-medium">{finalReply}</p>
             </div>
 
-            <button
-              onClick={() => copyToClipboard(finalReply)}
-              className="w-full py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-colors"
-            >
-              {copied ? "✓ 已复制" : "📋 复制"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => copyToClipboard(finalReply)}
+                className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-colors"
+              >
+                {copied ? "✓ 已复制" : "📋 复制"}
+              </button>
+              <button
+                onClick={() => sendToWhatsApp(finalReply)}
+                className="flex-1 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors"
+              >
+                {whatsappSent ? "✓ 已打开 WhatsApp" : "📱 发送到 WhatsApp"}
+              </button>
+            </div>
           </div>
         )}
 
