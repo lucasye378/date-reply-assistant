@@ -46,7 +46,11 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
           </p>
 
           <button
-            onClick={() => onSubscribe(PRICE_MONTHLY)}
+            onClick={() => {
+              track("upgrade_click", { plan: "monthly" });
+              track("plan_selected", { plan: "monthly", priceId: PRICE_MONTHLY });
+              onSubscribe(PRICE_MONTHLY);
+            }}
             disabled={subscribing}
             className="w-full py-4 border-2 border-pink-500 rounded-2xl text-left px-5 hover:bg-pink-50 transition-colors disabled:opacity-50"
           >
@@ -55,7 +59,11 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
           </button>
 
           <button
-            onClick={() => onSubscribe(PRICE_YEARLY)}
+            onClick={() => {
+              track("upgrade_click", { plan: "yearly" });
+              track("plan_selected", { plan: "yearly", priceId: PRICE_YEARLY });
+              onSubscribe(PRICE_YEARLY);
+            }}
             disabled={subscribing}
             className="w-full py-4 bg-pink-500 text-white rounded-2xl text-left px-5 hover:bg-pink-600 transition-colors relative disabled:opacity-50"
           >
@@ -160,7 +168,14 @@ export default function Home() {
   const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gMaEX4Eg0do394ayWcjS04";
   const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_eVqfZhfiUaS29xs4aycjS09";
 
+  const track = (event: string, metadata?: Record<string, string>) => {
+    const payload = { event, feature: "payment_flow", ...metadata, ts: Date.now() };
+    console.log("[PAYMENT_TRACK]", payload);
+    localStorage.setItem("payment_event", JSON.stringify(payload));
+  };
+
   const handleSubscribe = async (priceId: string) => {
+    track("stripe_redirect", { priceId });
     setSubscribing(true);
     const url = priceId === PRICE_MONTHLY ? PAYMENT_LINK_MONTHLY : PAYMENT_LINK_YEARLY;
     window.location.href = url;
