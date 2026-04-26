@@ -21,8 +21,10 @@ export async function POST(req: NextRequest) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Webhook signature error:", message);
+    return NextResponse.json({ error: "Invalid signature", details: message }, { status: 400 });
   }
 
   if (event.type === "checkout.session.completed") {

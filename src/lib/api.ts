@@ -50,6 +50,8 @@ export async function generateReplySuggestions(
 
   const content = response.choices?.[0]?.message?.content || "";
 
+  const options: ReplyOption[] = [];
+
   // Parse response: look for 🥨 🧱 🤷 emoji prefixes
   const emojiMap: Record<string, string> = {
     "🥨": "俏皮/调侃型",
