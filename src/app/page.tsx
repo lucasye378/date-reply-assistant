@@ -3,21 +3,20 @@
 import { useState, useRef } from "react";
 import { ReplyOption } from "@/lib/api";
 
-const CONTEXTS = [
-  "刚认识，还在试探",
-  "约会1-2次后",
-  "暧昧期",
-  "朋友刚变成恋人",
-  "不确定关系进展",
-];
-
 const CONTEXT_LABELS: Record<string, string> = {
-  "刚认识，还在试探": "刚认识，还在试探阶段，不想显得太热情",
+  "刚匹配不知道怎么开场": "刚匹配，不知道怎么发第一条消息",
   "约会1-2次后": "约会了1-2次，有点感觉但不确定对方",
-  "暧昧期": "暧昧期，想推进但怕太主动",
-  "朋友刚变成恋人": "刚确定关系，还在适应",
-  "不确定关系进展": "不确定现在是什么阶段",
+  "对方回复后不知道怎么继续": "对方回复了，但不知道该怎么接话",
+  "被已读不回了怎么办": "发消息被已读不回，不知道怎么办",
+  "第一次约会前紧张": "第一次约会前紧张，想准备好说什么",
 };
+
+// Demo responses for testing without API key
+const DEMO_RESPONSES: ReplyOption[] = [
+  { style: "自信有趣", emoji: "😏", text: "看来你终于被我的魅力吸引了～" },
+  { style: "温柔确认", emoji: "😊", text: "我也玩得很开心，期待下次见～" },
+  { style: "简洁酷", emoji: "👍", text: "嗯，周末见" },
+];
 
 export default function Home() {
   const [theirMessage, setTheirMessage] = useState("");
@@ -28,6 +27,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleGenerate = async () => {
@@ -37,6 +37,14 @@ export default function Home() {
     setOptions([]);
     setSelectedOption(null);
     setCustomReply("");
+
+    if (isDemoMode) {
+      // Demo mode - return fake responses
+      await new Promise((r) => setTimeout(r, 1000));
+      setOptions(DEMO_RESPONSES);
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/reply", {
@@ -80,6 +88,22 @@ export default function Home() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-8">
+        {/* Demo Mode Toggle */}
+        <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isDemoMode}
+              onChange={(e) => setIsDemoMode(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300"
+            />
+            <div>
+              <span className="text-sm font-medium text-yellow-800">测试模式（无需 API key）</span>
+              <p className="text-xs text-yellow-600">勾选后使用示例回复，方便测试 UI</p>
+            </div>
+          </label>
+        </div>
+
         {/* Their Message Input */}
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-700 mb-2 block">
