@@ -24,6 +24,13 @@ const FREE_USES_LIMIT = 3;
 const USES_KEY = "date-reply-uses";
 const SUBSCRIBED_KEY = "date-reply-subscribed";
 
+// Payment flow tracking
+const trackPayment = (event: string, metadata?: Record<string, string>) => {
+  const payload = { event, feature: "payment_flow", ...metadata, ts: Date.now() };
+  console.log("[PAYMENT_TRACK]", payload);
+  localStorage.setItem("payment_event", JSON.stringify(payload));
+};
+
 interface SubscriptionModalProps {
   onClose: () => void;
   onSubscribe: (priceId: string) => Promise<void>;
@@ -47,8 +54,8 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
 
           <button
             onClick={() => {
-              track("upgrade_click", { plan: "monthly" });
-              track("plan_selected", { plan: "monthly", priceId: PRICE_MONTHLY });
+              trackPayment("upgrade_click", { plan: "monthly" });
+              trackPayment("plan_selected", { plan: "monthly", priceId: PRICE_MONTHLY });
               onSubscribe(PRICE_MONTHLY);
             }}
             disabled={subscribing}
@@ -60,8 +67,8 @@ function SubscriptionModal({ onClose, onSubscribe, subscribing }: SubscriptionMo
 
           <button
             onClick={() => {
-              track("upgrade_click", { plan: "yearly" });
-              track("plan_selected", { plan: "yearly", priceId: PRICE_YEARLY });
+              trackPayment("upgrade_click", { plan: "yearly" });
+              trackPayment("plan_selected", { plan: "yearly", priceId: PRICE_YEARLY });
               onSubscribe(PRICE_YEARLY);
             }}
             disabled={subscribing}
@@ -175,7 +182,7 @@ export default function Home() {
   };
 
   const handleSubscribe = async (priceId: string) => {
-    track("stripe_redirect", { priceId });
+    trackPayment("stripe_redirect", { priceId });
     setSubscribing(true);
     const url = priceId === PRICE_MONTHLY ? PAYMENT_LINK_MONTHLY : PAYMENT_LINK_YEARLY;
     window.location.href = url;
