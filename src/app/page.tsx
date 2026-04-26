@@ -254,7 +254,7 @@ export default function Home() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">💬 约会短信助手</h1>
-          <p className="text-sm text-gray-500 mt-1">不知道怎么回？给你3个选择</p>
+          <p className="text-sm text-gray-500 mt-1">收到暧昧消息不知道怎么回？AI 帮你生成3个回复选项</p>
         </div>
       </header>
 
@@ -267,13 +267,16 @@ export default function Home() {
                 ? `免费试用 ${remainingFree} 次，不绑卡`
                 : "试用次数已用完"}
             </span>
+          </div>
+
+          {!isSubscribed && (
             <button
               onClick={() => setShowPaywall(true)}
-              className="text-xs text-pink-500 font-medium hover:text-pink-700"
+              className="w-full py-3 bg-pink-500 text-white rounded-xl font-medium text-base hover:bg-pink-600 transition-colors mb-6"
             >
               解锁 Pro，无限用 →
             </button>
-          </div>
+          )}
         )}
 
         {/* Their Message Input */}
