@@ -7,3 +7,11 @@ export const supabaseAdmin =
   supabaseUrl && supabaseServiceKey && supabaseUrl !== "placeholder.supabase.co"
     ? createClient(supabaseUrl, supabaseServiceKey)
     : null;
+
+export function isSupabaseConfigured(): boolean {
+  return !!(
+    supabaseUrl &&
+    supabaseServiceKey &&
+    supabaseUrl !== "placeholder.supabase.co"
+  );
+}
