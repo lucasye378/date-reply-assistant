@@ -198,6 +198,12 @@ export default function Home() {
           <p className="text-lg text-gray-600 mb-6">
             Get 3 different response options. Choose one, send it, move on.
           </p>
+          <button
+            onClick={() => textareaRef.current?.focus()}
+            className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 transition-colors mb-3"
+          >
+            Try Free — 3 options in 3 seconds
+          </button>
           <div className="inline-block bg-pink-100 text-pink-700 text-sm font-medium px-4 py-2 rounded-full">
             No signup needed. No data saved.
           </div>
@@ -243,7 +249,7 @@ export default function Home() {
           disabled={!theirMessage.trim() || loading}
           className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-8"
         >
-          {loading ? "🤔 Thinking..." : "✨ Get 3 Options"}
+          {loading ? "🤔 Thinking..." : "✨ Get Options"}
         </button>
 
         {/* Results */}
