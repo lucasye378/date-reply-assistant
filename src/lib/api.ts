@@ -34,6 +34,19 @@ export interface ReplyOption {
   text: string;
 }
 
+const OPENER_SYSTEM_PROMPT = `You are a dating opener coach. The user just matched with someone and needs an opening line.
+
+Generate 3 opening lines in different styles, each under 30 characters:
+
+1. 🥨 Playful: Flirty, playful, makes them smile
+2. 😊 Warm: Friendly, genuine, approachable
+3. 🤔 Curious: Asks a fun question to start conversation
+
+Output format (strictly follow this, no other content):
+🥨 [playful opener]
+😊 [warm opener]
+🤔 [curious opener]`
+
 export async function generateReplySuggestions(
   theirMessage: string,
   context?: string
@@ -92,6 +105,68 @@ export async function generateReplySuggestions(
       { style: "俏皮/调侃型", emoji: "🥨", text: "这个不错～有意思" },
       { style: "正经回应型", emoji: "🧱", text: "我也玩得很开心，期待下次见面" },
       { style: "简短敷衍型", emoji: "🤷", text: "嗯" },
+    ];
+  }
+
+  return options.slice(0, 3);
+}
+
+export async function generateOpeningLines(
+  context: string,
+  style?: string
+): Promise<ReplyOption[]> {
+  const prompt = `Dating situation: ${context}
+
+Give me 3 opening lines to start the conversation.`;
+
+  const response = await getClient().chat.completions.create({
+    model: "MiniMax-M2.7",
+    messages: [
+      { role: "system", content: OPENER_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 600,
+  });
+
+  const content = response.choices?.[0]?.message?.content || "";
+
+  const options: ReplyOption[] = [];
+  const emojiMap: Record<string, string> = {
+    "🥨": "Playful",
+    "😊": "Warm",
+    "🤔": "Curious",
+  };
+
+  const lines = content.split("\n").filter((l) => l.trim());
+  for (const line of lines) {
+    const trimmed = line.trim();
+    for (const [emoji, styleLabel] of Object.entries(emojiMap)) {
+      if (trimmed.startsWith(emoji)) {
+        const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
+        if (text) options.push({ style: styleLabel, emoji, text });
+      }
+    }
+  }
+
+  // Fallback: try numbered list
+  if (options.length < 3) {
+    const numbered = content.match(/^[1-3][.、]\s*(.+)/gm);
+    if (numbered) {
+      const styles = ["Playful", "Warm", "Curious"];
+      const emojis = ["🥨", "😊", "🤔"];
+      for (let i = 0; i < Math.min(numbered.length, 3); i++) {
+        const text = numbered[i].replace(/^[1-3][.、]\s*/, "");
+        options.push({ style: styles[i], emoji: emojis[i], text });
+      }
+    }
+  }
+
+  // Final fallback
+  if (options.length === 0) {
+    return [
+      { style: "Playful", emoji: "🥨", text: "So... what made you swipe right on me? 😏" },
+      { style: "Warm", emoji: "😊", text: "Hey! How's your day going?" },
+      { style: "Curious", emoji: "🤔", text: "Quick question — what's the most interesting thing you've read recently?" },
     ];
   }
 
