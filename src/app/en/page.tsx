@@ -90,6 +90,13 @@ export default function Home() {
       setIsSubscribed(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
+
+    // Track page view
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "page_view", feature: "FeatureA", path: "/en" }),
+    }).catch(() => {});
   }, []);
 
   const handleSubscribe = async (plan: "monthly" | "yearly") => {
@@ -106,6 +113,11 @@ export default function Home() {
 
     if (!isSubscribed && usesCount >= FREE_USES_LIMIT) {
       setShowPaywall(true);
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "paywall_shown", feature: "FeatureA", uses_count: usesCount }),
+      }).catch(() => {});
       return;
     }
 
@@ -113,6 +125,12 @@ export default function Home() {
     setOptions([]);
     setSelectedOption(null);
     setCustomReply("");
+
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "generate_attempt", feature: "FeatureA" }),
+    }).catch(() => {});
 
     try {
       const res = await fetch("/api/reply", {
@@ -124,15 +142,30 @@ export default function Home() {
       const data = await res.json();
       if (data.options) {
         setOptions(data.options);
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "generate_success", feature: "FeatureA", options_count: data.options.length }),
+        }).catch(() => {});
         if (!isSubscribed) {
           const newCount = usesCount + 1;
           setUsesCount(newCount);
           localStorage.setItem(USES_KEY, String(newCount));
         }
       } else {
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "generate_error", feature: "FeatureA", error: data.error || "no_options" }),
+        }).catch(() => {});
         console.error("API error:", data);
       }
     } catch (e) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate_error", feature: "FeatureA", error: "network_error" }),
+      }).catch(() => {});
       console.error("Request failed:", e);
     } finally {
       setLoading(false);
