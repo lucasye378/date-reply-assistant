@@ -3,6 +3,9 @@ import OpenAI from "openai";
 let client: OpenAI | null = null;
 
 function getClient(): OpenAI {
+  if (!process.env.MINIMAX_API_KEY) {
+    throw new Error("MINIMAX_API_KEY environment variable is not set");
+  }
   if (!client) {
     client = new OpenAI({
       apiKey: process.env.MINIMAX_API_KEY,
