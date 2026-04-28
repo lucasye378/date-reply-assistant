@@ -115,6 +115,9 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
   const [usesCount, setUsesCount] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -145,6 +148,21 @@ export default function Home() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail.trim()) return;
+    setWaitlistSubmitting(true);
+    try {
+      await fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "waitlist_join", email: waitlistEmail.trim() }),
+      });
+    } catch { /* ignore */ }
+    setWaitlistSubmitted(true);
+    setWaitlistSubmitting(false);
+  };
 
   const handleGenerate = async () => {
     if (!theirMessage.trim()) return;
@@ -406,6 +424,43 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Waitlist */}
+        <div className="mt-12 max-w-md mx-auto">
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-3xl p-6 text-center">
+            <div className="text-2xl mb-2">🎯</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">抢先体验 & 影响产品方向</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              加入候补名单，获取新功能优先访问权，还有机会影响产品路线图。
+            </p>
+            {waitlistSubmitted ? (
+              <div className="bg-green-50 border border-green-100 rounded-xl py-3 px-4 text-green-700 text-sm font-medium">
+                🎉 谢谢！我们会联系你
+              </div>
+            ) : (
+              <form
+                onSubmit={handleWaitlistSubmit}
+                className="flex gap-2"
+              >
+                <input
+                  type="email"
+                  required
+                  value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                />
+                <button
+                  type="submit"
+                  disabled={waitlistSubmitting}
+                  className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {waitlistSubmitting ? "..." : "加入候补"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
 
         {/* Privacy Note */}
         <p className="text-center text-xs text-gray-400 mt-8">
