@@ -364,7 +364,7 @@ export default function Home() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">💬 Dating Reply Assistant</h1>
-          <p className="text-sm text-gray-500 mt-1">3 reply options. Pick one. Move on.</p>
+          <p className="text-sm text-gray-500 mt-1">You pick. We help you decide.</p>
         </div>
       </header>
 
@@ -385,7 +385,7 @@ export default function Home() {
           </button>
           <div className="flex items-center justify-between">
             <span className="inline-block bg-pink-100 text-pink-700 text-sm font-medium px-4 py-2 rounded-full">
-              No signup needed. No data saved.
+              AI gives you options. You choose. You send.
             </span>
             <span className="text-sm text-gray-400">
               Pro <span className="font-semibold text-gray-600">$9.99/mo</span> · cancel anytime
@@ -440,6 +440,7 @@ export default function Home() {
         {options.length > 0 && (
           <div className="space-y-3 mb-6">
             <h3 className="text-sm font-medium text-gray-700">3 Reply Options:</h3>
+            <p className="text-xs text-gray-500 text-center mb-2">选择一个发送，或修改后发送 / Pick one to send, or edit first</p>
             {options.map((option, idx) => (
               <button
                 key={idx}
@@ -556,7 +557,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Waitlist 
+        {/* Waitlist */}
         <div className="mt-12 max-w-md mx-auto">
           <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-3xl p-6 text-center">
             <div className="text-2xl mb-2">🎯</div>

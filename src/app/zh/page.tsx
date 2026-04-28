@@ -272,7 +272,7 @@ export default function Home() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">💬 约会短信助手</h1>
-          <p className="text-sm text-gray-500 mt-1">收到暧昧消息不知道怎么回？AI 帮你生成3个回复选项</p>
+          <p className="text-sm text-gray-500 mt-1">你选，我们帮你决定。</p>
         </div>
       </header>
 
@@ -356,6 +356,7 @@ export default function Home() {
         {options.length > 0 && (
           <div className="space-y-3 mb-6">
             <h3 className="text-sm font-medium text-gray-700">3个回复建议：</h3>
+            <p className="text-xs text-gray-500 text-center mb-2">选择一个发送，或修改后发送</p>
             {options.map((option, idx) => (
               <button
                 key={idx}
