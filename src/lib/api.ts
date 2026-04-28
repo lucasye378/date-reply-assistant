@@ -138,21 +138,15 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const userPrompt = `情况：${context}${styleFilter}\n\n请给出3条开场白建议。`;
+  const userPrompt = `${context}${styleFilter}\nOutput ONLY 3 Chinese sentences, one per line. Do not include any explanation or labels. Each under 40 characters.`;
 
-  const openerSystem = `你是一个约会开场白助手。根据用户提供的场景，生成3条中文约会开场白。每条不超过40字。格式要求：每条前面加对应emoji符号：淡定型用🌊，俏皮型用😏，简短型用⚡。直接输出3行，每行一条，不要其他解释。`;
-
-  const response = await getClient().chat.completions.create({
-    model: "MiniMax-M2.7",
-    messages: [
-      { role: "system", content: openerSystem },
-      { role: "user", content: userPrompt },
-    ],
-    max_tokens: 800,
-    temperature: 0.7,
+  const response = await getOpenAIClient().chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: userPrompt }],
+    max_tokens: 200,
   });
 
-  const content = extractContent(response);
+  const content = response.choices?.[0]?.message?.content || "";
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
