@@ -123,9 +123,9 @@ const OPENER_PROMPTS: Record<string, string> = {
 };
 
 const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
-  "🌊": "淡定型",
-  "😏": "俏皮型",
-  "⚡": "简短型",
+  "wave": { emoji: "🌊", label: "淡定型" },
+  "smirk": { emoji: "😏", label: "俏皮型" },
+  "bolt": { emoji: "⚡", label: "简短型" },
 };
 
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
@@ -148,10 +148,10 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const lines = content.split("\n").filter((l) => l.trim());
   for (const line of lines) {
     const trimmed = line.trim();
-    for (const [emoji, styleLabel] of Object.entries(OPENER_STYLES)) {
+    for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
       if (trimmed.startsWith(emoji)) {
         const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
-        if (text) options.push({ style: styleLabel, emoji, text });
+        if (text) options.push({ style: label, emoji, text });
       }
     }
   }
