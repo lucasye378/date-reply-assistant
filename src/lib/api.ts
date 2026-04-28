@@ -39,12 +39,13 @@ function extractOpenerText(response: any): string {
   const reasoning = (choice.message as any)?.reasoning_content || "";
   const content = choice.message?.content || "";
 
-  // Try content first
+  // Try content first (where Feature A successfully gets its output)
   const fromContent = stripThinking(content);
   if (hasChineseText(fromContent) && fromContent.length > 10) {
     return fromContent;
   }
 
+  // Fallback to reasoning_content (MiniMax M2.7 may put opener there for reasoning tasks)
   const stripped = stripThinking(reasoning);
 
   // Strategy 1: numbered lines (1. xxx  2. xxx  3. xxx)
