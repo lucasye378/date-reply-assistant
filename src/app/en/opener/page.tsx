@@ -146,8 +146,8 @@ export default function OpenerPage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">✨ First Message Generator</h1>
-            <p className="text-sm text-gray-500">Don&apos;t know how to start? Get 3 options.</p>
+            <h1 className="text-xl font-bold text-gray-900">✨ Opening Line Generator</h1>
+            <p className="text-sm text-gray-500">Don&apos;t know what to start with? Get 3 options — pick one.</p>
           </div>
           <Link href="/en" className="text-sm text-pink-500 hover:text-pink-600 font-medium">
             Reply →

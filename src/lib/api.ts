@@ -132,17 +132,23 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const prompt = `${context}${styleFilter}\n\nGenerate 3 Chinese dating opener lines. Line 1 = calm/natural, Line 2 = playful, Line 3 = short/direct. Max 40 chars each. Output only the 3 lines, nothing else.`;
+  const prompt = `场景：${context}${styleFilter}
+
+生成3条约会开场白，每条一行，格式：
+🌊 淡定自然风格的开场白
+😏 俏皮有趣风格的开场白
+⚡ 简短直接风格的开场白
+每条不超过40字。`;
 
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "你是一个约会开场白助手。根据用户输入的场景，生成3条不同风格的开场白。每条一行，不超过40字。格式：淡定自然\n俏皮有趣\n简短直接。" },
-      { role: "user", content: prompt },
+      { role: "system", content: "You are a dating opener generator. Output exactly 3 lines, each a Chinese opener under 40 chars. Line1: calm. Line2: playful. Line3: short. Nothing else." },
+      { role: "user", content: `${context}${styleFilter}
+
+Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3` },
     ],
-    max_tokens: 600,
-    // @ts-ignore - MiniMax supports thinking: { type: "off" }
-    thinking: { type: "off" } as any,
+    max_tokens: 300,
   });
 
   const content = apiResponse.choices?.[0]?.message?.content || "";

@@ -260,10 +260,10 @@ export default function Home() {
         {/* Hero */}
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
-            Got a message you don't know how to reply to?
+            Not sure what to send?
           </h2>
           <p className="text-lg text-gray-600 mb-6">
-            Get 3 different response options. Choose one, send it, move on.
+            Don&apos;t guess — pick from 3 options. You choose, you send.
           </p>
           <button
             onClick={() => textareaRef.current?.focus()}
