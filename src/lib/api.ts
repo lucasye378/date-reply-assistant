@@ -16,12 +16,12 @@ function getClient(): OpenAI {
 }
 
 function stripThinkingTags(raw: string): string {
-  const OPEN = "\u{1D5E4}"; // Mathematical Sans-Serif Bold Italic Capital T
-  const CLOSE = "\u{1D5EB}"; // Mathematical Sans-Serif Bold Italic Capital E
-  const thinkStart = raw.indexOf(OPEN);
-  const thinkEnd = raw.indexOf(CLOSE);
-  if (thinkStart >= 0 && thinkEnd > thinkStart) {
-    return (raw.substring(0, thinkStart) + raw.substring(thinkEnd + 1)).trim();
+  const OPEN = "<think>";
+  const CLOSE = "</think>";
+  const i = raw.indexOf(OPEN);
+  const j = raw.indexOf(CLOSE, i + 1);
+  if (i >= 0 && j > i) {
+    return (raw.substring(0, i) + raw.substring(j + CLOSE.length)).trim();
   }
   return raw;
 }
