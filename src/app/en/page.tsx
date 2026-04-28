@@ -131,10 +131,9 @@ export default function Home() {
     const bonusUsed = localStorage.getItem(BONUS_USES_KEY);
     if (bonusUsed) return;
     localStorage.setItem(BONUS_USES_KEY, "true");
-    const current = parseInt(localStorage.getItem(USES_KEY) || "0", 10);
-    const newCount = Math.max(0, current - 3) + 3;
-    localStorage.setItem(USES_KEY, String(newCount));
-    setUsesCount(newCount);
+    // Reset usesCount so user can generate 3 more times before hitting paywall again
+    setUsesCount(0);
+    localStorage.setItem(USES_KEY, "0");
     setBonusUsed(true);
     setShowPaywall(false);
     fetch("/api/track", {
