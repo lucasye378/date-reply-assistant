@@ -83,13 +83,17 @@ function extractEmojiLines(s: string): string | null {
   const emojiMap: Record<string, string> = {
     "🥨": "俏皮", "🧱": "正经", "⚡": "简短", "💬": "回复",
   };
+  // Build a regex that strips emoji (surrogate pair or single-codepoint) at line start
+  const emojiRe = /^[\uD83D\uDE37\uD83C\uDF69\uD83D\uDCAB\uD83D\uDCDD][\uFE0F\u20E3]*/gu;
   const lines = s.split('\n');
   const openers: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
     for (const [emoji, style] of Object.entries(emojiMap)) {
       if (trimmed.startsWith(emoji)) {
-        openers.push(trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, ''));
+        // Use regex to strip emoji properly (surrogate-pair aware)
+        const text = trimmed.replace(emojiRe, '').replace(/^[-:：\s]+/, '').trim();
+        openers.push(text);
         break;
       }
     }
