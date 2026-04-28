@@ -5,13 +5,16 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const { context, style } = await request.json();
+    const { relationshipStage, style, gender } = await request.json();
 
-    if (!context) {
-      return NextResponse.json({ error: "Context required" }, { status: 400 });
+    if (!relationshipStage || !style || !gender) {
+      return NextResponse.json(
+        { error: "relationshipStage, style, and gender are all required" },
+        { status: 400 }
+      );
     }
 
-    const options = await generateOpeningLines(context, style);
+    const options = await generateOpeningLines({ relationshipStage, style, gender });
 
     return NextResponse.json({ options });
   } catch (error) {

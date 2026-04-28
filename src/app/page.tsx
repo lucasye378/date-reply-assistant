@@ -272,8 +272,9 @@ export default function Home() {
               onClick={() => setShowPaywall(true)}
               className="w-full py-3 bg-pink-500 text-white rounded-xl font-medium text-base hover:bg-pink-600 transition-colors mb-6"
             >
-              解锁 Pro，无限用 →
+              Pro $9.99/月 — 解锁无限次使用 →
             </button>
+            <p className="text-xs text-gray-400 text-center -mt-4 mb-6">月付 $9.99，随时取消</p>
           </>
         )}
 
