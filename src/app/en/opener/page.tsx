@@ -84,13 +84,17 @@ export default function OpenerPage() {
           setUsesCount(newCount);
           localStorage.setItem(USES_KEY, String(newCount));
         }
-      } else if (data.error === "daily_limit_reached") {
-        setShowPaywall(true);
-      }
         fetch("/api/track", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "opener_generate_success", feature: "FeatureC", options_count: data.options.length }),
+        }).catch(() => {});
+      } else if (data.error === "daily_limit_reached") {
+        setShowPaywall(true);
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "opener_paywall_shown", feature: "FeatureC" }),
         }).catch(() => {});
       }
     } catch (e) {
