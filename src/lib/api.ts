@@ -30,22 +30,24 @@ function hasChineseText(s: string): boolean {
   return /[\u4e00-\u9fa5][\u4e00-\u9fa5]/.test(s);
 }
 
-// Extract opener text from MiniMax M2.7 response
-// Priority: reasoning_content > content (both stripped of thinking tags)
 function extractOpenerText(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const reasoning = (choice.message as any)?.reasoning_content || "";
   const content = choice.message?.content || "";
+  console.log("[OPENER] raw content:", content.substring(0, 300));
+  console.log("[OPENER] raw reasoning:", reasoning.substring(0, 300));
 
-  // Try reasoning_content first
+  const fromContent = stripThinking(content);
   const fromReasoning = stripThinking(reasoning);
+  console.log("[OPENER] stripped content:", fromContent.substring(0, 200));
+  console.log("[OPENER] stripped reasoning:", fromReasoning.substring(0, 200));
+  console.log("[OPENER] hasChinese(fromContent):", hasChineseText(fromContent));
+  console.log("[OPENER] hasChinese(fromReasoning):", hasChineseText(fromReasoning));
+
   if (hasChineseText(fromReasoning) && fromReasoning.length > 10) {
     return fromReasoning;
   }
-
-  // Fallback to content
-  const fromContent = stripThinking(content);
   if (hasChineseText(fromContent) && fromContent.length > 10) {
     return fromContent;
   }
