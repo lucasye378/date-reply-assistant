@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 
 let client: OpenAI | null = null;
+let openaiClient: OpenAI | null = null;
+
 function getClient(): OpenAI {
   if (!process.env.MINIMAX_API_KEY) {
     throw new Error("MINIMAX_API_KEY environment variable is not set");
@@ -14,12 +16,16 @@ function getClient(): OpenAI {
   return client;
 }
 
-function extractContent(response: any): string {
-  const choice = response.choices?.[0];
-  if (!choice) return "";
-  const content = choice.message?.content || "";
-  // Only use content, NOT reasoning_content — reasoning is thinking trace, not answer
-  return content.trim();
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY environment variable is not set");
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
 }
 
 
@@ -134,10 +140,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const userPrompt = `情况：${context}${styleFilter}\n\n请给出3条开场白建议。`;
 
-  const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：
-🌊 [淡定型开场白]
-😏 [俏皮型开场白]
-⚡ [简短型开场白]。每条不超过40字。`;
+  const openerSystem = `你是一个约会开场白助手。根据用户提供的场景，生成3条中文约会开场白。每条不超过40字。格式要求：每条前面加对应emoji符号：淡定型用🌊，俏皮型用😏，简短型用⚡。直接输出3行，每行一条，不要其他解释。`;
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
