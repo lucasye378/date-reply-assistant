@@ -54,6 +54,8 @@ export async function generateReplySuggestions(
       { role: "user", content: prompt },
     ],
     max_tokens: 800,
+    // @ts-ignore - MiniMax supports thinking: { type: "off" }
+    thinking: { type: "off" } as any,
   });
 
   const content = response.choices?.[0]?.message?.content || "";
@@ -139,6 +141,8 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
       { role: "user", content: prompt },
     ],
     max_tokens: 600,
+    // @ts-ignore - MiniMax supports thinking: { type: "off" }
+    thinking: { type: "off" } as any,
   });
 
   const content = apiResponse.choices?.[0]?.message?.content || "";
