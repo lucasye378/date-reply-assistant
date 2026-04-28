@@ -130,11 +130,14 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const prompt = `${context}${styleFilter}\n\n请生成3条约会开场白，每条一行，顺序是：1)淡定自然 2)俏皮有趣 3)简短直接。每条不超过40字。`;
+  const prompt = `${context}${styleFilter}\n\nGenerate 3 Chinese dating opener lines. Line 1 = calm/natural, Line 2 = playful, Line 3 = short/direct. Max 40 chars each. Output only the 3 lines, nothing else.`;
 
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      { role: "system", content: "你是一个约会开场白助手。根据用户输入的场景，生成3条不同风格的开场白。每条一行，不超过40字。格式：淡定自然\n俏皮有趣\n简短直接。" },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 600,
   });
 
