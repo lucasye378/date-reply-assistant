@@ -18,8 +18,8 @@ function extractContent(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const content = choice.message?.content || "";
-  const reasoning = (choice.message as any)?.reasoning_content || "";
-  return (reasoning.trim() || content.trim()) as string;
+  // Only use content, NOT reasoning_content — reasoning is thinking trace, not answer
+  return content.trim();
 }
 
 
