@@ -18,19 +18,35 @@ function getClient(): OpenAI {
 function stripThinkingTags(raw: string): string {
   const OPEN = "<think>";
   const CLOSE = "</think>";
-  const i = raw.indexOf(OPEN);
-  const j = raw.indexOf(CLOSE, i + 1);
-  if (i >= 0 && j > i) {
-    return (raw.substring(0, i) + raw.substring(j + CLOSE.length)).trim();
+  let result = raw;
+  // Keep stripping until no more thinking tags remain
+  while (true) {
+    const i = result.indexOf(OPEN);
+    const j = result.indexOf(CLOSE, i + 1);
+    if (i >= 0 && j > i) {
+      result = (result.substring(0, i) + result.substring(j + CLOSE.length)).trim();
+    } else {
+      break;
+    }
   }
-  return raw;
+  // Also remove any stray opening tags that might remain
+  result = result.replace(/<think>/g, "").replace(/</think>/g, "").trim();
+  return result;
 }
 
 function extractContent(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const raw = choice.message?.content || "";
-  return stripThinkingTags(raw) || raw;
+  // Also check reasoning_content field (MiniMax M2.7 uses this for thinking)
+  const reasoning = (choice.message as any)?.reasoning_content || "";
+  const cleaned = stripThinkingTags(raw);
+  // If cleaned content looks like thinking (short, starts with "The user"), use reasoning if available
+  if (cleaned.length < 10 || cleaned.match(/^(The user|I want|I need|So we|This is|First)/)) {
+    const reasoningCleaned = stripThinkingTags(reasoning);
+    return reasoningCleaned.length > cleaned.length ? reasoningCleaned : cleaned;
+  }
+  return cleaned;
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
@@ -129,10 +145,13 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const prompt = `对方 profile 内容：${profile}\n\n请根据这个 profile，生成3条不同风格的中文约会开场白，每条不超过40字。输出格式：
-🥨 [俏皮型开场白]
-🧱 [正经型开场白]
-⚡ [简短型开场白]`;
+  const prompt = `对方 profile 内容：${profile}
+
+直接输出3条中文约会开场白，每条不超过40字。不要解释，不要思考过程。
+格式（严格按这个）：
+🥨 [俏皮型]
+🧱 [正经型]
+⚡ [简短型]`;
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
