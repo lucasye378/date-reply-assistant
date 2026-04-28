@@ -19,7 +19,8 @@ function extractContent(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const raw = choice.message?.content || "";
-  const withoutThinking = raw.replace(/^<think>[\s\S]*?</think>/, "").trim();
+  // Strip <think>...</think> thinking tags from MiniMax M2.7 reasoning
+  const withoutThinking = raw.replace(/<think>[\s\S]*?</think>/, "").trim();
   return withoutThinking || raw;
 }
 
@@ -27,9 +28,9 @@ const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期
 
 每次生成3个不同风格的回复建议，每个不超过40字：
 
-1. 🥨 俏皮/调侃型：有点调皮、幽默、轻松自信
-2. 🧱 正经回应型：真诚、有温度、认真回应对方
-3. 🤷 简短敷衍型：冷淡、简短、显得不那么在乎
+1. 俏皮/调侃型：有点调皮、幽默、轻松自信
+2. 正经回应型：真诚、有温度、认真回应对方
+3. 简短敷衍型：冷淡、简短、显得不那么在乎
 
 输出格式（严格按这个格式，不要其他内容）：
 🥨 [俏皮内容]
@@ -79,7 +80,7 @@ export async function generateReplySuggestions(
     const trimmed = line.trim();
     for (const [emoji, style] of Object.entries(emojiMap)) {
       if (trimmed.startsWith(emoji)) {
-        const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
+        const text = trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, "");
         if (text) options.push({ style, emoji, text });
       }
     }
@@ -160,13 +161,12 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const options: ReplyOption[] = [];
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
-    const text = lines[i].trim().replace(/^[\d①②③\.、:\-\[\]]+\s*/, "").trim();
+    const text = lines[i].trim().replace(/^[\d.、:\-]+/, "").trim();
     if (text) {
       options.push({ style: styleMap[i].label, emoji: styleMap[i].emoji, text });
     }
   }
 
-  // Fallback: emoji-based
   if (options.length < 3) {
     const emojiMap: Record<string, string> = {
       "🥨": "开场白1", "🧱": "开场白2", "⚡": "开场白3",
@@ -175,7 +175,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
       const trimmed = line.trim();
       for (const [emoji, label] of Object.entries(emojiMap)) {
         if (trimmed.startsWith(emoji)) {
-          const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "").trim();
+          const text = trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, "").trim();
           if (text && !options.find((o) => o.emoji === emoji)) {
             options.push({ style: label, emoji, text });
           }
