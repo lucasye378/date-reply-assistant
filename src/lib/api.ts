@@ -16,21 +16,23 @@ function getClient(): OpenAI {
 }
 
 function stripThinkingTags(raw: string): string {
-  const OPEN = "<think>";
-  const CLOSE = "</think>";
+  // Strip <think>...</think> blocks repeatedly until none remain
   let result = raw;
-  // Keep stripping until no more thinking tags remain
+  const openTag = "<think>";
+  const closeTag = "</think>";
   while (true) {
-    const i = result.indexOf(OPEN);
-    const j = result.indexOf(CLOSE, i + 1);
+    const i = result.indexOf(openTag);
+    const j = result.indexOf(closeTag, i + 1);
     if (i >= 0 && j > i) {
-      result = (result.substring(0, i) + result.substring(j + CLOSE.length)).trim();
+      result = result.substring(0, i) + result.substring(j + closeTag.length);
     } else {
       break;
     }
   }
-  // Also remove any stray opening tags that might remain
-  result = result.replace(/<think>/g, "").replace(/</think>/g, "").trim();
+  // Also handle ASCII-style thinking tags
+  const asciiOpen = "<think>";
+  const asciiClose = "</think>";
+  result = result.split(asciiOpen).join("").split(asciiClose).join("").trim();
   return result;
 }
 
@@ -38,13 +40,12 @@ function extractContent(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const raw = choice.message?.content || "";
-  // Also check reasoning_content field (MiniMax M2.7 uses this for thinking)
   const reasoning = (choice.message as any)?.reasoning_content || "";
   const cleaned = stripThinkingTags(raw);
-  // If cleaned content looks like thinking (short, starts with "The user"), use reasoning if available
-  if (cleaned.length < 10 || cleaned.match(/^(The user|I want|I need|So we|This is|First)/)) {
-    const reasoningCleaned = stripThinkingTags(reasoning);
-    return reasoningCleaned.length > cleaned.length ? reasoningCleaned : cleaned;
+  // If cleaned looks like reasoning garbage, prefer reasoning field
+  if (cleaned.length < 15 || /^(The user|I want|I need|So we|This is|First|Let me)/.test(cleaned)) {
+    const rc = stripThinkingTags(reasoning);
+    return rc.length > cleaned.length ? rc : cleaned;
   }
   return cleaned;
 }
@@ -163,24 +164,24 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
-    0: { emoji: "🥨", label: "开场白1" },
-    1: { emoji: "🧱", label: "开场白2" },
-    2: { emoji: "⚡", label: "开场白3" },
+    0: { emoji: "🥨", label: "俏皮型" },
+    1: { emoji: "🧱", label: "正经型" },
+    2: { emoji: "⚡", label: "简短型" },
   };
 
   const options: ReplyOption[] = [];
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
     const line = lines[i].trim();
-    // Strip emoji at start
     const text = line.replace(/^[🥨🧱⚡]\s*/, "").trim();
     if (text) {
       options.push({ style: styleMap[i].label, emoji: styleMap[i].emoji, text });
     }
   }
 
+  // Fallback: try emoji-based extraction
   if (options.length < 3) {
     const emojiMap: Record<string, string> = {
-      "🥨": "开场白1", "🧱": "开场白2", "⚡": "开场白3",
+      "🥨": "俏皮型", "🧱": "正经型", "⚡": "简短型",
     };
     for (const line of lines) {
       const trimmed = line.trim();
@@ -197,9 +198,9 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   if (options.length < 3) {
     const fallbacks: ReplyOption[] = [
-      { style: "开场白1", emoji: "🥨", text: "最近天气不错，约杯咖啡？" },
-      { style: "开场白2", emoji: "🧱", text: "刷到你好几次了，不约可惜" },
-      { style: "开场白3", emoji: "⚡", text: "在干嘛？" },
+      { style: "俏皮型", emoji: "🥨", text: "刷到你好几次了，不约可惜～" },
+      { style: "正经型", emoji: "🧱", text: "看到你也喜欢爬山，下次一起？" },
+      { style: "简短型", emoji: "⚡", text: "在干嘛？" },
     ];
     while (options.length < 3) {
       options.push(fallbacks[options.length]);
