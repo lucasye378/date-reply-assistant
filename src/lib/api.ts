@@ -237,7 +237,10 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const options: ReplyOption[] = [];
 
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
-    const text = lines[i].trim().replace(/^[🥨🧱⚡\d.、:：\-\s]+/, "").trim();
+    const rawLine = lines[i].trim();
+    // Strip any emoji prefix (handles surrogate pairs)
+    const emojiRe = /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]+/gu;
+    const text = rawLine.replace(emojiRe, '').replace(/^[🥨🧱⚡\d.、:：\-\s]+/, '').trim();
     if (text) {
       options.push({ style: styles[i], emoji: emojis[i], text: text });
     }
