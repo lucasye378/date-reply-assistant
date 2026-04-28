@@ -31,7 +31,7 @@ function hasChineseText(s: string): boolean {
 }
 
 // Extract opener text from MiniMax M2.7 response
-// content is often empty; reasoning_content has the actual text but may be mixed with thinking tags
+// content is often empty; reasoning_content may have analysis + opener mixed with thinking tags
 function extractOpenerText(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
@@ -44,13 +44,31 @@ function extractOpenerText(response: any): string {
     return fromContent;
   }
 
-  // reasoning_content: find longest contiguous Chinese text block
-  const fromReasoning = extractChineseBlock(stripThinking(reasoning));
+  // reasoning_content: extract just the opener lines (after numbered markers)
+  // This avoids grabbing analysis text that precedes the actual openers
+  const stripped = stripThinking(reasoning);
+  const openerLines = extractNumberedLines(stripped);
+  if (openerLines) return openerLines;
+
+  // Fallback: try longest Chinese block
+  const fromReasoning = extractChineseBlock(stripped);
   if (fromReasoning.length > 5) {
     return fromReasoning;
   }
 
-  return fromContent || fromReasoning;
+  return fromContent || stripped;
+}
+
+// Extract the portion of text that follows numbered markers (1. 2. 3.)
+// Returns the opener text block, excluding analysis/preamble
+function extractNumberedLines(s: string): string | null {
+  const m = s.match(/[1-9][.、:：][^\n]*/);
+  if (!m) return null;
+  const idx = m.index!;
+  const tail = s.slice(idx);
+  const lines = tail.split('\n').filter(function(l) { return l.trim().length > 2; });
+  if (lines.length >= 3) return lines.slice(0, 3).join('\n');
+  return tail.trim().length > 5 ? tail.trim() : null;
 }
 
 // Extract longest contiguous Chinese text from a string (ignoring mixed English/tags)
