@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 
 let client: OpenAI | null = null;
-let openaiClient: OpenAI | null = null;
-
 function getClient(): OpenAI {
   if (!process.env.MINIMAX_API_KEY) {
     throw new Error("MINIMAX_API_KEY environment variable is not set");
@@ -16,17 +14,14 @@ function getClient(): OpenAI {
   return client;
 }
 
-function getOpenAIClient(): OpenAI {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY environment variable is not set");
-  }
-  if (!openaiClient) {
-    openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return openaiClient;
+function extractContent(response: any): string {
+  const choice = response.choices?.[0];
+  if (!choice) return "";
+  const content = choice.message?.content || "";
+  const reasoning = (choice.message as any)?.reasoning_content || "";
+  return (reasoning.trim() || content.trim()) as string;
 }
+
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
 
@@ -139,13 +134,21 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const userPrompt = `${context}${styleFilter}\nWrite 3 Chinese dating opener lines. Each under 40 characters. Output exactly 3 lines, nothing else. Line 1: calm natural. Line 2: playful. Line 3: short direct.`;
 
-  const response = await getOpenAIClient().chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: userPrompt }],
-    max_tokens: 300,
+  const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：
+🌊 [淡定型开场白]
+😏 [俏皮型开场白]
+⚡ [简短型开场白]。每条不超过40字。`;
+
+  const response = await getClient().chat.completions.create({
+    model: "MiniMax-M2.7",
+    messages: [
+      { role: "system", content: openerSystem },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: 400,
   });
 
-  const content = response.choices?.[0]?.message?.content || "";
+  const content = extractContent(response);
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
