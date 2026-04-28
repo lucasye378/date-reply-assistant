@@ -15,39 +15,33 @@ function getClient(): OpenAI {
   return client;
 }
 
-function stripThinkingTags(raw: string): string {
-  // Strip <think>...</think> blocks repeatedly until none remain
-  let result = raw;
-  const openTag = "<think>";
-  const closeTag = "</think>";
-  while (true) {
-    const i = result.indexOf(openTag);
-    const j = result.indexOf(closeTag, i + 1);
-    if (i >= 0 && j > i) {
-      result = result.substring(0, i) + result.substring(j + closeTag.length);
-    } else {
-      break;
-    }
+function stripThinking(raw: string): string {
+  let r = raw;
+  const open = "<think>";
+  const close = "</think>";
+  for (;;) {
+    const i = r.indexOf(open);
+    const j = r.indexOf(close, i + 1);
+    if (!(i >= 0 && j > i)) break;
+    r = r.substring(0, i) + r.substring(j + close.length);
   }
-  // Also handle ASCII-style thinking tags
-  const asciiOpen = "<think>";
-  const asciiClose = "</think>";
-  result = result.split(asciiOpen).join("").split(asciiClose).join("").trim();
-  return result;
+  return r.trim();
 }
 
-function extractContent(response: any): string {
-  const choice = response.choices?.[0];
-  if (!choice) return "";
-  const raw = choice.message?.content || "";
-  const reasoning = (choice.message as any)?.reasoning_content || "";
-  const cleaned = stripThinkingTags(raw);
-  // If cleaned looks like reasoning garbage, prefer reasoning field
-  if (cleaned.length < 15 || /^(The user|I want|I need|So we|This is|First|Let me)/.test(cleaned)) {
-    const rc = stripThinkingTags(reasoning);
-    return rc.length > cleaned.length ? rc : cleaned;
-  }
-  return cleaned;
+function hasChineseText(s: string): boolean {
+  return /[\u4e00-\u9fa5].*[\u4e00-\u9fa5]/.test(s);
+}
+
+function extractOpener(response: any): string {
+  const c = response.choices?.[0];
+  if (!c) return "";
+  const raw = c.message?.content || "";
+  const reasoning = (c.message as any)?.reasoning_content || "";
+  const fromRaw = stripThinking(raw);
+  if (hasChineseText(fromRaw) && fromRaw.length > 10) return fromRaw;
+  const fromReasoning = stripThinking(reasoning);
+  if (hasChineseText(fromReasoning) && fromReasoning.length > 10) return fromReasoning;
+  return fromRaw || raw;
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
@@ -91,7 +85,7 @@ export async function generateReplySuggestions(
     max_tokens: 800,
   });
 
-  const content = extractContent(response);
+  const content = response.choices?.[0]?.message?.content || "";
 
   const options: ReplyOption[] = [];
 
@@ -146,26 +140,19 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const prompt = `对方 profile 内容：${profile}
+  const prompt = `对方profile：${profile}\n\n直接输出3条中文开场白，每条不超过40字。格式：🥨开场白文本\n🧱开场白文本\n⚡开场白文本。不要解释。`;
 
-直接输出3条中文约会开场白，每条不超过40字。不要解释，不要思考过程。
-格式（严格按这个）：
-🥨 [俏皮型]
-🧱 [正经型]
-⚡ [简短型]`;
-
-  // Use MiniMax-M2.7 for opener (same API key, no extra cost)
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "你是一个约会开场白助手。根据用户提供的对方profile信息，直接生成3条中文开场白。每条不超过40字。格式： emoji+空格+开场白文本。例如：🥨 你好呀～" },
-      { role: "user", content: prompt }
+      { role: "system", content: "你是一个约会开场白助手。根据对方信息，直接输出3条开场白，每条不超过40字。格式：🥨+空格+开场白。直接输出，不要解释。" },
+      { role: "user", content: prompt },
     ],
     max_tokens: 500,
-    reasoning_effort: "none",
+    temperature: 0.3,
   });
 
-  const content = extractContent(response);
+  const content = extractOpener(response);
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
@@ -183,7 +170,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     }
   }
 
-  // Fallback: try emoji-based extraction
+  // Fallback: emoji-based extraction
   if (options.length < 3) {
     const emojiMap: Record<string, string> = {
       "🥨": "俏皮型", "🧱": "正经型", "⚡": "简短型",
