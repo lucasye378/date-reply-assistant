@@ -6,6 +6,7 @@ import { ReplyOption } from "@/lib/api";
 const FREE_USES_LIMIT = 3;
 const USES_KEY = "date-reply-en-uses";
 const SUBSCRIBED_KEY = "date-reply-en-subscribed";
+const BONUS_USES_KEY = "date-reply-en-bonus-used";
 
 const PAYMENT_LINK_MONTHLY = "https://buy.stripe.com/test_4gM00j4Eg5xIbFAayWcjS0a";
 const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_eVqfZhfiUaS29xs4aycjS09";
@@ -13,10 +14,12 @@ const PAYMENT_LINK_YEARLY = "https://buy.stripe.com/test_eVqfZhfiUaS29xs4aycjS09
 interface SubscriptionModalProps {
   onClose: () => void;
   onSubscribe: (plan: "monthly" | "yearly") => void;
+  onBonus: () => void;
   loading: boolean;
+  bonusUsed?: boolean;
 }
 
-function SubscriptionModal({ onClose, onSubscribe, loading }: SubscriptionModalProps) {
+function SubscriptionModal({ onClose, onSubscribe, onBonus, loading, bonusUsed }: SubscriptionModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
@@ -27,9 +30,15 @@ function SubscriptionModal({ onClose, onSubscribe, loading }: SubscriptionModalP
         </div>
 
         <div className="p-6 space-y-4">
-          <p className="text-gray-600 text-sm text-center">
-            Unlimited reply suggestions for smoother dates 💕
-          </p>
+          {/* Success example */}
+          <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4">
+            <div className="text-xs text-pink-600 font-medium mb-2">💡 What you'll get</div>
+            <div className="text-xs text-gray-600 mb-2">Someone sent:</div>
+            <div className="text-sm text-gray-800 italic mb-3">"hey, what's up? haven't heard from u in a while 😏"</div>
+            <div className="text-xs text-gray-500 mb-2">You reply:</div>
+            <div className="text-sm text-gray-900 font-medium">"haha been busy being amazing 😏 what about you?"</div>
+            <div className="text-xs text-green-600 mt-2">✓ They replied 20 min later</div>
+          </div>
 
           <button
             onClick={() => onSubscribe("monthly")}
@@ -52,9 +61,14 @@ function SubscriptionModal({ onClose, onSubscribe, loading }: SubscriptionModalP
             <div className="text-xs text-pink-100 mt-0.5">$5/mo, cancel anytime</div>
           </button>
 
-          <button onClick={onClose} className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">
-            Not now
-          </button>
+          {!bonusUsed && (
+            <button
+              onClick={onBonus}
+              className="w-full py-3 text-sm text-pink-600 hover:text-pink-700 font-medium border-2 border-pink-200 rounded-xl hover:bg-pink-50 transition-colors"
+            >
+              Get 3 more free uses — only this once
+            </button>
+          )}
 
           <p className="text-center text-xs text-gray-400 mt-2">
             All features included. Cancel anytime. Access continues through billing period.
@@ -75,6 +89,7 @@ export default function Home() {
   const [subscribing, setSubscribing] = useState(false);
   const [usesCount, setUsesCount] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [bonusUsed, setBonusUsed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -83,6 +98,7 @@ export default function Home() {
     const stored = localStorage.getItem(USES_KEY);
     setUsesCount(stored ? parseInt(stored, 10) : 0);
     setIsSubscribed(localStorage.getItem(SUBSCRIBED_KEY) === "true");
+    setBonusUsed(localStorage.getItem(BONUS_USES_KEY) === "true");
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("subscribed") === "true") {
@@ -106,6 +122,23 @@ export default function Home() {
 
     const url = plan === "monthly" ? PAYMENT_LINK_MONTHLY : PAYMENT_LINK_YEARLY;
     window.location.href = url;
+  };
+
+  const handleBonus = () => {
+    // Grant 3 bonus uses — once only per user
+    const bonusUsed = localStorage.getItem(BONUS_USES_KEY);
+    if (bonusUsed) return;
+    localStorage.setItem(BONUS_USES_KEY, "true");
+    const current = parseInt(localStorage.getItem(USES_KEY) || "0", 10);
+    const newCount = Math.max(0, current - 3) + 3; // Refund the 3 used, then grant 3 more
+    localStorage.setItem(USES_KEY, String(newCount));
+    setUsesCount(newCount);
+    setShowPaywall(false);
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "bonus_granted", feature: "FeatureA" }),
+    }).catch(() => {});
   };
 
   const handleGenerate = async () => {
@@ -210,7 +243,9 @@ export default function Home() {
         <SubscriptionModal
           onClose={() => setShowPaywall(false)}
           onSubscribe={handleSubscribe}
+          onBonus={handleBonus}
           loading={subscribing}
+          bonusUsed={bonusUsed}
         />
       )}
 
