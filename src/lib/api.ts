@@ -133,44 +133,52 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const prompt = `${context}${styleFilter}\n\n请生成3条约会开场白，每条一行，顺序是：1)淡定自然 2)俏皮有趣 3)简短直接。每条不超过40字。直接输出句子，不要格式符号。"}]
+  const prompt = `${context}${styleFilter}\n\n请生成3条约会开场白，每条一行，顺序是：1)淡定自然 2)俏皮有趣 3)简短直接。每条不超过40字。不要任何格式符号，直接输出句子。`;
+
+  const response = await getClient().chat.completions.create({
+    model: "MiniMax-M2.7",
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 600,
+  });
 
   const content = response.choices?.[0]?.message?.content || "";
 
+  // Line-based parsing: line 1 = 🌊淡定型, line 2 = 😏俏皮型, line 3 = ⚡简短型
+  const lines = content.split("\n").filter((l) => l.trim());
+  const styleMap: Record<number, { emoji: string; label: string }> = {
+    0: { emoji: "🌊", label: "淡定型" },
+    1: { emoji: "😏", label: "俏皮型" },
+    2: { emoji: "⚡", label: "简短型" },
+  };
+
   const options: ReplyOption[] = [];
-
-  // Try JSON parsing first
-  try {
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (parsed.openers && Array.isArray(parsed.openers)) {
-        for (const o of parsed.openers) {
-          options.push({ style: o.style || "", emoji: "", text: o.text || "" });
-        }
-      }
+  for (let i = 0; i < Math.min(lines.length, 3); i++) {
+    const text = lines[i].trim().replace(/^[\d①②③\.、:\-\[\]]+\s*/, "").trim();
+    // Strip any remaining bracket labels like [淡定型开场白]
+    const cleaned = text.replace(/\[.*?\]/g, "").trim();
+    if (cleaned) {
+      options.push({ style: styleMap[i].label, emoji: styleMap[i].emoji, text: cleaned });
     }
-  } catch {
-    // JSON parse failed, try line parsing
   }
 
-  // Fallback: line parsing
+  // Fallback: try JSON parsing
   if (options.length < 3) {
-    const lines = content.split("\n").filter((l) => l.trim());
-    for (const line of lines) {
-      const trimmed = line.trim();
-      for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
-        if (trimmed.startsWith(emoji)) {
-          let text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
-          // Strip any remaining bracket labels like [淡定型开场白]
-          text = text.replace(/\[.*?\]/g, "").trim();
-          if (text) options.push({ style: label, emoji, text });
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.openers && Array.isArray(parsed.openers)) {
+          for (const o of parsed.openers) {
+            options.push({ style: o.style || "", emoji: "", text: o.text || "" });
+          }
         }
       }
+    } catch {
+      // JSON parse failed
     }
   }
 
-  // Fallback
+  // Final fallback
   if (options.length < 3) {
     const fallbacks: ReplyOption[] = [
       { style: "淡定型", emoji: "🌊", text: "最近天气不错，约杯咖啡？", scene: "刚认识，正经" },
