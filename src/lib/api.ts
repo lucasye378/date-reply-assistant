@@ -135,9 +135,14 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const prompt = `${context}\n${styleFilter}生成3条不同风格的开场白，每条不超过40字。\n\n输出格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]`;
 
+  const systemPrompt = "你是一个约会助手。严格按以下JSON格式输出，不要其他内容：{"openers":[{"style":"🌊淡定型","text":"具体开场白"},{"style":"😏俏皮型","text":"具体开场白"},{"style":"⚡简短型","text":"具体开场白"}]}";
+
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ],
     max_tokens: 600,
   });
 
@@ -145,13 +150,31 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   const options: ReplyOption[] = [];
 
-  const lines = content.split("\n").filter((l) => l.trim());
-  for (const line of lines) {
-    const trimmed = line.trim();
-    for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
-      if (trimmed.startsWith(emoji)) {
-        const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
-        if (text) options.push({ style: label, emoji, text });
+  // Try JSON parsing first
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.openers && Array.isArray(parsed.openers)) {
+        for (const o of parsed.openers) {
+          options.push({ style: o.style || "", emoji: "", text: o.text || "" });
+        }
+      }
+    }
+  } catch {
+    // JSON parse failed, try line parsing
+  }
+
+  // Fallback: line parsing
+  if (options.length < 3) {
+    const lines = content.split("\n").filter((l) => l.trim());
+    for (const line of lines) {
+      const trimmed = line.trim();
+      for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
+        if (trimmed.startsWith(emoji)) {
+          const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
+          if (text) options.push({ style: label, emoji, text });
+        }
       }
     }
   }
