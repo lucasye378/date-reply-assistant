@@ -31,64 +31,87 @@ function hasChineseText(s: string): boolean {
 }
 
 // Extract opener text from MiniMax M2.7 response
-// content is often empty; reasoning_content may have analysis + opener mixed with thinking tags
+// The model is MiniMax-M2.7 (reasoning model) — reasoning_content has the actual output
+// content is usually empty. reasoning_content format varies; we try multiple strategies.
 function extractOpenerText(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const reasoning = (choice.message as any)?.reasoning_content || "";
   const content = choice.message?.content || "";
 
-  // Try content first if it has Chinese text
+  // Try content first
   const fromContent = stripThinking(content);
   if (hasChineseText(fromContent) && fromContent.length > 10) {
     return fromContent;
   }
 
-  // reasoning_content: extract just the opener lines (after numbered markers)
-  // This avoids grabbing analysis text that precedes the actual openers
   const stripped = stripThinking(reasoning);
-  const openerLines = extractNumberedLines(stripped);
-  if (openerLines) return openerLines;
 
-  // Fallback: try longest Chinese block
-  const fromReasoning = extractChineseBlock(stripped);
-  if (fromReasoning.length > 5) {
-    return fromReasoning;
-  }
+  // Strategy 1: numbered lines (1. xxx  2. xxx  3. xxx)
+  const numbered = extractAllNumberedLines(stripped);
+  if (numbered) return numbered;
+
+  // Strategy 2: emoji-prefixed lines (🥨 xxx  🧱 xxx  🤷 xxx)
+  const emojiLines = extractEmojiLines(stripped);
+  if (emojiLines) return emojiLines;
+
+  // Strategy 3: extract all Chinese sentences, filter by length (20-50 chars = likely opener)
+  const sentences = extractChineseSentences(stripped);
+  if (sentences.length >= 3) return sentences.slice(0, 3).join('\n');
 
   return fromContent || stripped;
 }
 
-// Extract the portion of text that follows numbered markers (1. 2. 3.)
-// Returns the opener text block, excluding analysis/preamble
-function extractNumberedLines(s: string): string | null {
-  const m = s.match(/[1-9][.、:：][^\n]*/);
-  if (!m) return null;
-  const idx = m.index!;
-  const tail = s.slice(idx);
-  const lines = tail.split('\n').filter(function(l) { return l.trim().length > 2; });
-  if (lines.length >= 3) return lines.slice(0, 3).join('\n');
-  return tail.trim().length > 5 ? tail.trim() : null;
-}
-
-// Extract longest contiguous Chinese text from a string (ignoring mixed English/tags)
-function extractChineseBlock(s: string): string {
-  let best = "";
-  let current = "";
-  for (const ch of s) {
-    if (/[\u4e00-\u9fa5]/.test(ch)) {
-      current += ch;
-      if (current.length > best.length) best = current;
-    } else if (/[\u3000-\u303f\uff00-\uffef]/.test(ch)) {
-      // Chinese punctuation — keep as part of block
-      current += ch;
-      if (current.length > best.length) best = current;
-    } else {
-      current = "";
+// Find all numbered lines (1. xxx  2. xxx  3. xxx) and return them as joined string
+function extractAllNumberedLines(s: string): string | null {
+  const lines = s.split('\n');
+  const openers: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Match: number + punctuation at start (1. 1、 1： etc.)
+    if (/^[1-9][.、:：]/.test(trimmed)) {
+      openers.push(trimmed.replace(/^[1-9][.、:：]\s*/, '').trim());
     }
   }
-  return best.trim();
+  if (openers.length >= 3) return openers.slice(0, 3).join('\n');
+  return null;
 }
+
+// Find emoji-prefixed lines and return as joined string
+function extractEmojiLines(s: string): string | null {
+  const emojiMap: Record<string, string> = {
+    "🥨": "俏皮", "🧱": "正经", "⚡": "简短", "💬": "回复",
+  };
+  const lines = s.split('\n');
+  const openers: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    for (const [emoji, style] of Object.entries(emojiMap)) {
+      if (trimmed.startsWith(emoji)) {
+        openers.push(trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, ''));
+        break;
+      }
+    }
+  }
+  if (openers.length >= 3) return openers.slice(0, 3).join('\n');
+  return null;
+}
+
+// Extract all Chinese sentences (5-60 chars) from string
+function extractChineseSentences(s: string): string[] {
+  // Split on common sentence-ending punctuation
+  const segments = s.split(/[\u3002\uff01\uff1f\n]/);
+  const sentences: string[] = [];
+  for (const seg of segments) {
+    const t = seg.trim();
+    // Chinese opener is typically 5-60 chars
+    if (t.length >= 5 && t.length <= 60 && hasChineseText(t)) {
+      sentences.push(t);
+    }
+  }
+  return sentences;
+}
+
 
 const SYSTEM_PROMPT = "你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。\n\n每次生成3个不同风格的回复建议，每个不超过40字：\n\n1. 俏皮/调侃型：有点调皮、幽默、轻松自信\n2. 正经回应型：真诚、有温度、认真回应对方\n3. 简短敷衍型：冷淡、简短、显得不那么在乎\n\n输出格式（严格按这个格式，不要其他内容）：\n🥨 [俏皮内容]\n🧱 [正经内容]\n🤷 [敷衍内容]";
 
