@@ -138,15 +138,15 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const userPrompt = "对方profile：" + profile + "\n\n请给出3条约会开场白，每条40字以内。直接分3行输出。";
+  const userPrompt = "对方profile：" + profile + "\n\n给出3条约会开场白，每条不超过40字。格式：1. 第1条\n2. 第2条\n3. 第3条。不要解释。";
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "你是一个约会短信助手。用户需要约会开场白建议。直接输出3条，每条40字以内。分3行，每行一条，直接开始输出内容。" },
+      { role: "system", content: "You are a helpful assistant. Always respond with exactly 3 lines, numbered 1-2-3, no other text." },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 600,
+    max_tokens: 500,
     temperature: 0.3,
   });
 
