@@ -95,6 +95,9 @@ export default function Home() {
   const [verifyError, setVerifyError] = useState("");
   const [copied, setCopied] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -141,6 +144,24 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "bonus_granted", feature: "FeatureA" }),
     }).catch(() => {});
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail.trim()) return;
+    setWaitlistSubmitting(true);
+    try {
+      // Submit to track endpoint (stores in Supabase if configured, logs otherwise)
+      await fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "waitlist_join", email: waitlistEmail.trim() }),
+      });
+    } catch {
+      // Ignore errors - don't block UX
+    }
+    setWaitlistSubmitted(true);
+    setWaitlistSubmitting(false);
   };
 
   const handleVerifyPayment = async () => {
@@ -507,6 +528,43 @@ export default function Home() {
               <div className="font-medium text-gray-800 mb-1">How much?</div>
               <div className="text-sm text-gray-600">$9.99/month. 3 free tries to start. Cancel anytime.</div>
             </div>
+          </div>
+        </div>
+
+        {/* Waitlist 
+        <div className="mt-12 max-w-md mx-auto">
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-3xl p-6 text-center">
+            <div className="text-2xl mb-2">🎯</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Get early access & shape the product</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Join our waitlist for priority access to new features and a chance to influence the roadmap.
+            </p>
+            {waitlistSubmitted ? (
+              <div className="bg-green-50 border border-green-100 rounded-xl py-3 px-4 text-green-700 text-sm font-medium">
+                🎉 Thanks! We&apos;ll reach out soon.
+              </div>
+            ) : (
+              <form
+                onSubmit={handleWaitlistSubmit}
+                className="flex gap-2"
+              >
+                <input
+                  type="email"
+                  required
+                  value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                />
+                <button
+                  type="submit"
+                  disabled={waitlistSubmitting}
+                  className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {waitlistSubmitting ? "..." : "Join Waitlist"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
 
