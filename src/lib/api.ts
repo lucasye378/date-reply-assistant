@@ -17,31 +17,47 @@ function getClient(): OpenAI {
 
 function stripThinking(raw: string): string {
   let r = raw;
-  const open = "<think>";
-  const close = "</think>";
   for (;;) {
-    const i = r.indexOf(open);
-    const j = r.indexOf(close, i + 1);
+    const i = r.indexOf("<think>");
+    const j = r.indexOf("</think>", i + 1);
     if (!(i >= 0 && j > i)) break;
-    r = r.substring(0, i) + r.substring(j + close.length);
+    r = r.substring(0, i) + r.substring(j + 6);
   }
   return r.trim();
-}
-
-function hasChineseText(s: string): boolean {
-  return /[\u4e00-\u9fa5].*[\u4e00-\u9fa5]/.test(s);
 }
 
 function extractOpener(response: any): string {
   const c = response.choices?.[0];
   if (!c) return "";
   const raw = c.message?.content || "";
-  const reasoning = (c.message as any)?.reasoning_content || "";
-  const fromRaw = stripThinking(raw);
-  if (hasChineseText(fromRaw) && fromRaw.length > 10) return fromRaw;
-  const fromReasoning = stripThinking(reasoning);
-  if (hasChineseText(fromReasoning) && fromReasoning.length > 10) return fromReasoning;
-  return fromRaw || raw;
+
+  // Try to find emoji + Chinese text segments
+  // Use a simple approach: look for known emoji markers followed by Chinese
+  const marker1 = String.fromCharCode(0xF0, 0x9F, 0xA5, 0xA8); // 🥨
+  const marker2 = String.fromCharCode(0xF0, 0x9F, 0xA5, 0xB1); // 🧱
+  const marker3 = String.fromCharCode(0xE2, 0x9A, 0xA1);       // ⚡
+
+  const lines: string[] = [];
+  const markers = [marker1, marker2, marker3];
+
+  for (const m of markers) {
+    const idx = raw.indexOf(m);
+    if (idx >= 0) {
+      const after = raw.substring(idx + m.length);
+      // Find Chinese text sequence
+      const match = after.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、：；～~\d\s]*/);
+      if (match && match[0].length > 3) {
+        lines.push(m + " " + match[0].trim());
+      }
+    }
+  }
+
+  if (lines.length >= 3) {
+    return lines.slice(0, 3).join("\n");
+  }
+
+  // Fallback: strip thinking and return raw
+  return stripThinking(raw);
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
@@ -140,13 +156,15 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const prompt = `对方profile：${profile}\n\n直接输出3条中文开场白，每条不超过40字。格式：🥨开场白文本\n🧱开场白文本\n⚡开场白文本。不要解释。`;
+  const userPrompt = `对方profile：${profile}\n\n直接输出3条中文开场白，每条不超过40字。格式：\n🥨 [俏皮型开场白]\n🧱 [正经型开场白]\n⚡ [简短型开场白]`;
+
+  const systemPrompt = "你是一个约会开场白助手。直接输出3条开场白，每条不超过40字。格式：🥨+空格+开场白。直接输出内容，不要解释。";
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "你是一个约会开场白助手。根据对方信息，直接输出3条开场白，每条不超过40字。格式：🥨+空格+开场白。直接输出，不要解释。" },
-      { role: "user", content: prompt },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
     ],
     max_tokens: 500,
     temperature: 0.3,
