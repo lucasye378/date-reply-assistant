@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import { ReplyOption } from "@/lib/api";
 
 const FREE_USES_LIMIT = 3;
@@ -98,7 +97,6 @@ function SubscriptionModal({ onClose, onSubscribe, onBonus, loading, bonusUsed }
 }
 
 export default function Home() {
-  const searchParams = useSearchParams();
   const [theirMessage, setTheirMessage] = useState("");
   const [options, setOptions] = useState<ReplyOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ReplyOption | null>(null);
