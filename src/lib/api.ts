@@ -130,13 +130,14 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const prompt = `场景：${context}${styleFilter}\n\n生成3条约会开场白，每条一行，格式：\n🌊 淡定自然风格的开场白\n😏 俏皮有趣风格的开场白\n⚡ 简短直接风格的开场白\n每条不超过40字。`;
+  const userPrompt = `对方情况：${context}${styleFilter}\n\n请给出3个开场白建议。`;
+  const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]。每条不超过40字。`;
 
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]。每条不超过40字。不要解释，直接输出。" },
-      { role: "user", content: prompt },
+      { role: "system", content: openerSystem },
+      { role: "user", content: userPrompt },
     ],
     max_tokens: 600,
   });
