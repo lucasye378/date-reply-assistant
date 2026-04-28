@@ -135,11 +135,14 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const content = hasChineseText(fromReasoning) && fromReasoning.length > 10
     ? fromReasoning
     : stripThinking(content_raw);
-  console.log("[OPENER DEBUG] reasoning:", reasoning.substring(0, 200));
-  console.log("[OPENER DEBUG] content_raw:", content_raw.substring(0, 200));
+  console.log("[OPENER DEBUG] reasoning:", reasoning.substring(0, 300));
+  console.log("[OPENER DEBUG] content_raw:", content_raw.substring(0, 300));
+  console.log("[OPENER DEBUG] fromReasoning:", fromReasoning.substring(0, 200));
+  console.log("[OPENER DEBUG] content:", content.substring(0, 200));
 
   // Split by newlines and parse
   const lines = content.split("\n").filter(function(l) { return l.trim().length > 2; });
+  console.log("[OPENER DEBUG] lines:", lines);
 
   const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
   const emojis = ["🥨", "🧱", "🤷"];
