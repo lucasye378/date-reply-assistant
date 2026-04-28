@@ -15,13 +15,22 @@ function getClient(): OpenAI {
   return client;
 }
 
+function stripThinkingTags(raw: string): string {
+  const OPEN = "\u{1D5E4}"; // Mathematical Sans-Serif Bold Italic Capital T
+  const CLOSE = "\u{1D5EB}"; // Mathematical Sans-Serif Bold Italic Capital E
+  const thinkStart = raw.indexOf(OPEN);
+  const thinkEnd = raw.indexOf(CLOSE);
+  if (thinkStart >= 0 && thinkEnd > thinkStart) {
+    return (raw.substring(0, thinkStart) + raw.substring(thinkEnd + 1)).trim();
+  }
+  return raw;
+}
+
 function extractContent(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const raw = choice.message?.content || "";
-  // Strip <think>...</think> thinking tags from MiniMax M2.7 reasoning
-  const withoutThinking = raw.replace(/<think>[\s\S]*?</think>/, "").trim();
-  return withoutThinking || raw;
+  return stripThinkingTags(raw) || raw;
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
