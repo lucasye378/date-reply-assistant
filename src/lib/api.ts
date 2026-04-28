@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 let client: OpenAI | null = null;
+let openaiClient: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!process.env.MINIMAX_API_KEY) {
@@ -13,6 +14,18 @@ function getClient(): OpenAI {
     });
   }
   return client;
+}
+
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY environment variable is not set");
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
@@ -56,7 +69,7 @@ export async function generateReplySuggestions(
     max_tokens: 800,
   });
 
-  const content = response.choices?.[0]?.message?.content || "";
+  const content = extractContent(response);
 
   const options: ReplyOption[] = [];
 
@@ -119,31 +132,20 @@ const OPENER_PROMPTS: Record<string, string> = {
   "约会1-2次-女追男": "约会1-2次后，女生追男生。可以主动一些，延续约会氛围。",
 };
 
-const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
-  "wave": { emoji: "🌊", label: "淡定型" },
-  "smirk": { emoji: "😏", label: "俏皮型" },
-  "bolt": { emoji: "⚡", label: "简短型" },
-};
-
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { relationshipStage, style, gender } = params;
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const userPrompt = `对方情况：${context}${styleFilter}\n\n请给出3个开场白建议。`;
-  const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]。每条不超过40字。`;
+  const userPrompt = `${context}${styleFilter}\nWrite 3 Chinese dating opener lines. Each under 40 characters. Output exactly 3 lines, nothing else. Line 1: calm natural. Line 2: playful. Line 3: short direct.`;
 
-  const apiResponse = await getClient().chat.completions.create({
-    model: "MiniMax-M2.7",
-    messages: [
-      { role: "system", content: "输出3条中文开场白，每条不超过20字。不要解释。" },
-      { role: "user", content: userPrompt },
-    ],
-    max_tokens: 200,
-    temperature: 0.3,
+  const response = await getOpenAIClient().chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: userPrompt }],
+    max_tokens: 300,
   });
 
-  const content = apiResponse.choices?.[0]?.message?.content || "";
+  const content = extractContent(response);
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
@@ -157,20 +159,6 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     const text = lines[i].trim().replace(/^[\d①②③\.、:\-\[\]]+\s*/, "").trim();
     if (text) {
       options.push({ style: styleMap[i].label, emoji: styleMap[i].emoji, text });
-    }
-  }
-
-  if (options.length < 3) {
-    for (const line of lines) {
-      const trimmed = line.trim();
-      for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
-        if (trimmed.startsWith(emoji)) {
-          const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "").trim();
-          if (text && !options.find((o) => o.emoji === emoji)) {
-            options.push({ style: label, emoji, text });
-          }
-        }
-      }
     }
   }
 
