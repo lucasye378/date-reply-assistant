@@ -8,28 +8,8 @@ const FREE_OPENER_LIMIT = 3;
 const USES_KEY = "date-reply-en-opener-uses";
 const SUBSCRIBED_KEY = "date-reply-en-subscribed";
 
-const RELATIONSHIP_STAGES = [
-  { value: "刚认识", label: "刚认识", desc: "刚匹配，还未聊天" },
-  { value: "暧昧期", label: "暧昧期", desc: "有来有往，有点感觉" },
-  { value: "约会1-2次", label: "约会1-2次", desc: "见过了，想继续发展" },
-];
-
-const STYLES = [
-  { value: "不限", label: "不限" },
-  { value: "俏皮", label: "俏皮" },
-  { value: "正经", label: "正经" },
-  { value: "简短", label: "简短" },
-];
-
-const GENDERS = [
-  { value: "男追女", label: "我是男生 → 她" },
-  { value: "女追男", label: "我是女生 → 他" },
-];
-
 export default function OpenerPage() {
-  const [relationshipStage, setRelationshipStage] = useState("刚认识");
-  const [style, setStyle] = useState("不限");
-  const [gender, setGender] = useState("男追女");
+  const [profile, setProfile] = useState("");
   const [options, setOptions] = useState<ReplyOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ReplyOption | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,6 +30,8 @@ export default function OpenerPage() {
   }, []);
 
   const handleGenerate = async () => {
+    if (!profile.trim()) return;
+
     if (!isSubscribed && usesCount >= FREE_OPENER_LIMIT) {
       setShowPaywall(true);
       fetch("/api/track", {
@@ -74,7 +56,7 @@ export default function OpenerPage() {
       const res = await fetch("/api/opener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ relationshipStage, style, gender, subscribed: isSubscribed }),
+        body: JSON.stringify({ profile: profile.trim(), subscribed: isSubscribed }),
       });
       const data = await res.json();
       if (data.options) {
@@ -154,7 +136,7 @@ export default function OpenerPage() {
         <div className="max-w-lg mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">✨ Opening Line Generator</h1>
-            <p className="text-sm text-gray-500">Don&apos;t know what to start with? Get 3 options — pick one.</p>
+            <p className="text-sm text-gray-500">Paste their profile — get 3 openers to pick from.</p>
           </div>
           <Link href="/en" className="text-sm text-pink-500 hover:text-pink-600 font-medium">
             Reply →
@@ -170,74 +152,28 @@ export default function OpenerPage() {
           </div>
         )}
 
-        {/* Gender */}
+        {/* Profile textarea */}
         <div className="mb-4">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">I am...</label>
-          <div className="grid grid-cols-2 gap-2">
-            {GENDERS.map((g) => (
-              <button
-                key={g.value}
-                onClick={() => setGender(g.value)}
-                className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  gender === g.value
-                    ? "bg-pink-500 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300"
-                }`}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Relationship stage */}
-        <div className="mb-4">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">Relationship stage</label>
-          <div className="grid grid-cols-3 gap-2">
-            {RELATIONSHIP_STAGES.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => setRelationshipStage(s.value)}
-                className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  relationshipStage === s.value
-                    ? "bg-pink-500 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-1 text-xs text-gray-400 text-center">
-            {RELATIONSHIP_STAGES.find((s) => s.value === relationshipStage)?.desc}
-          </div>
-        </div>
-
-        {/* Style preference */}
-        <div className="mb-6">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">Style preference</label>
-          <div className="grid grid-cols-4 gap-2">
-            {STYLES.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => setStyle(s.value)}
-                className={`py-2 rounded-xl text-sm font-medium transition-colors ${
-                  style === s.value
-                    ? "bg-pink-500 text-white"
-                    : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300"
-                }`}
-              >
-                {s.value}
-              </button>
-            ))}
-          </div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Their profile / bio
+          </label>
+          <textarea
+            value={profile}
+            onChange={(e) => setProfile(e.target.value)}
+            placeholder="Paste their Instagram bio, Bumble description, or how you met..."
+            className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+            rows={5}
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Include interests, job, what they post about — the more info, the better the openers.
+          </p>
         </div>
 
         {/* Generate */}
         <button
           onClick={handleGenerate}
-          disabled={loading}
-          className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 disabled:opacity-50 transition-colors mb-8"
+          disabled={loading || !profile.trim()}
+          className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-8"
         >
           {loading ? "🤔 Thinking..." : "✨ Get 3 Opening Lines"}
         </button>
@@ -249,42 +185,52 @@ export default function OpenerPage() {
             {options.map((option, idx) => (
               <div
                 key={idx}
-                className={`p-4 bg-white border-2 rounded-2xl ${
-                  selectedOption === option ? "border-pink-500 bg-pink-50" : "border-gray-200"
+                className={`bg-white border-2 rounded-2xl p-4 cursor-pointer transition-all ${
+                  selectedOption?.text === option.text
+                    ? "border-pink-400 ring-2 ring-pink-100"
+                    : "border-gray-100 hover:border-pink-200"
                 }`}
+                onClick={() => setSelectedOption(option)}
               >
-                <div className="flex items-start gap-3 mb-2">
-                  <span className="text-2xl">{option.emoji}</span>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-0.5">{option.style}</div>
-                    <p className="text-gray-800 font-medium">{option.text}</p>
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl flex-shrink-0">{option.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-400 mb-1">{option.style}</div>
+                    <div className="text-gray-800 text-sm leading-relaxed">{option.text}</div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyOption(option.text, idx);
+                    }}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      copiedIdx === idx
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-500"
+                    }`}
+                  >
+                    {copiedIdx === idx ? "✓ Copied" : "Copy"}
+                  </button>
                 </div>
-                {option.scene && (
-                  <div className="text-xs text-gray-400 ml-9 mb-2">适用：{option.scene}</div>
-                )}
-                <button
-                  onClick={() => copyOption(option.text, idx)}
-                  className={`ml-9 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    copiedIdx === idx
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {copiedIdx === idx ? "✓ Copied" : "📋 Copy"}
-                </button>
               </div>
             ))}
           </div>
         )}
 
-        {/* Switch */}
-        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-500 mb-3">Need to reply to a message instead?</p>
-          <Link href="/en" className="text-pink-500 font-medium text-sm hover:text-pink-600">
-            Try the Reply Assistant →
-          </Link>
-        </div>
+        {/* Upgrade nudge after results */}
+        {options.length > 0 && (
+          <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4 text-center">
+            <p className="text-sm text-gray-700 mb-3">
+              Want better <span className="font-medium">replies</span> to their messages?
+            </p>
+            <Link
+              href="/en"
+              className="inline-block w-full py-2.5 bg-pink-500 text-white rounded-xl text-sm font-medium hover:bg-pink-600 transition-colors"
+            >
+              Try Reply Assistant →
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );

@@ -1,4 +1,4 @@
-# Feature C (Opening Line Generator) - Monetization Spec
+# Feature C v2 (Opening Line Generator) - Spec
 
 ## Strategic Decision (2026-04-27)
 
@@ -20,56 +20,63 @@
 
 ---
 
-## Implementation
+## User Flow
 
-### Backend: `/api/opener`
-- Accepts `{ relationshipStage, style, gender, subscribed }`
-- **Free user (subscribed=false)**: IP-based rate limit, 3/day
-  - Uses in-memory `Map<ip:date, count>` (Vercel serverless)
-  - Returns `{ error: "daily_limit_reached" }` when exhausted (HTTP 429)
-- **Paid user (subscribed=true)**: Unlimited, no rate limit check
-- Subscribed status is soft-check from localStorage (gameable, accepted for MVP)
+### Input (Step 1)
+- User pastes对方的 profile/bio content into a textarea
+  - Bio, interests, common ground — anything useful
+- No style selector upfront (风格在结果里选)
+- No relationship stage selector
+- Example placeholder: "粘贴对方的 Facebook/IG/Bumble profile 内容，或者描述你们怎么认识的..."
 
-### Backend: `/api/subscription-status`
-- Accepts `{ email }`
-- Queries Stripe API: `stripe.customers.list({ email })` → check active subscriptions
-- Returns `{ active: boolean, plan: "monthly" | "yearly" | null }`
-- Used by checkout success page for post-payment email verification
+### Generate → Results (Step 2)
+- API generates 3 opening line options in different styles:
+  - 🥨 俏皮型 (playful/teasing)
+  - 🧱 正经型 (sincere/proper)
+  - ⚡ 简短型 (short/direct)
+- Each option has a copy button
+- User picks one, copies, sends
 
-### Frontend: `/en` (Reply page)
-- After Stripe payment redirect (`/?subscribed=true`):
-  - Shows "Verify Payment" modal asking for payment email
-  - User enters email → calls `/api/subscription-status`
-  - Stripe confirms active subscription → mark `SUBSCRIBED_KEY=localStorage`
-  - Grants immediate access instead of waiting for webhook lag
-
-### Frontend: `/en/opener`
-- Passes `subscribed: isSubscribed` to `/api/opener` on each request
-- `isSubscribed` read from localStorage on page load
-- Free 3/day tracked in localStorage + backend IP enforcement
-- Paywall modal shown when backend returns `daily_limit_reached`
+### Upgrade Prompt (Post-copy)
+- After copying, user sees: "Want better replies? Try Reply Assistant →"
 
 ---
 
-## Rate Limit Reset
-- Daily reset at midnight (server time)
-- In-memory Map resets when Vercel serverless instance recycles
-- For production-scale: migrate to Supabase `opener_usage` table
+## Implementation
+
+### Route: `/en/opener`
+- Standalone page, NOT a tab of Reply page
+- Single textarea input → generate → 3 style options in results
+- Style selector appears in results (not input stage)
+
+### Backend: `/api/opener`
+- Input: `{ profile: string }` (no relationshipStage, style, gender)
+- Output: 3 options with different styles
+- Same access tiers as spec above
+
+### Prompt Strategy
+- Use profile content to generate contextually relevant openers
+- 3 styles: 俏皮/正经/简短
+- Each under 40 characters
+- Copy-button per option
+
+---
+
+## Access Control
+- Free: 3/day (localStorage + IP backend)
+- Paid: unlimited
 
 ---
 
 ## Stripe Integration
-- Payment Links (pre-created in Stripe Dashboard)
+- Payment Links
   - Monthly: `test_4gM00j4Eg5xIbFAayWcjS0a`
   - Yearly: `test_eVqfZhfiUaS29xs4aycjS09`
-- `STRIPE_SECRET_KEY` env var for server-side API calls
-- No Supabase required for basic subscription check (Stripe API direct query)
+- Post-payment email verification via `/api/subscription-status`
 
 ---
 
 ## Upgrade Flow
-1. User hits free opener limit → sees paywall modal
-2. Modal promotes Reply Assistant ($9.99/mo) with social proof
-3. User clicks CTA → goes to Stripe Payment Link
-4. After payment → lands on `/?subscribed=true` → email verification modal
-5. Email verified → marked as paid in localStorage → unlimited access
+1. User exhausts free openers → paywall modal
+2. Modal promotes Reply Assistant ($9.99/mo)
+3. User pays → email verification → activate subscription

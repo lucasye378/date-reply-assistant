@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { generateOpeningLines } from "@/lib/api";
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-04-22.dahlia",
-  });
-}
+export const runtime = "nodejs";
 
 // In-memory rate limit store (per-day per-IP)
-// For production with multiple instances, use Supabase or Redis
 const dailyUsage = new Map<string, { date: string; count: number }>();
 const FREE_DAILY_LIMIT = 3;
 
@@ -24,26 +19,25 @@ function getClientIP(req: NextRequest): string {
   );
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { relationshipStage, style, gender, subscribed } = await req.json();
+    const { profile, subscribed } = await request.json();
 
-    if (!relationshipStage || !style || !gender) {
+    if (!profile?.trim()) {
       return NextResponse.json(
-        { error: "relationshipStage, style, and gender are all required" },
+        { error: "profile is required" },
         { status: 400 }
       );
     }
 
-    // If user is subscribed (verified via Stripe on success page), allow unlimited
+    // If user is subscribed, allow unlimited
     if (subscribed) {
-      const { generateOpeningLines } = await import("@/lib/api");
-      const options = await generateOpeningLines({ relationshipStage, style, gender });
+      const options = await generateOpeningLines({ profile: profile.trim() });
       return NextResponse.json({ options, unlimited: true });
     }
 
     // Free user: enforce 3/day limit by IP
-    const ip = getClientIP(req);
+    const ip = getClientIP(request);
     const today = getDateKey();
     const key = `${ip}:${today}`;
 
@@ -65,8 +59,7 @@ export async function POST(req: NextRequest) {
       count: (current?.date === today ? (current.count || 0) : 0) + 1,
     });
 
-    const { generateOpeningLines } = await import("@/lib/api");
-    const options = await generateOpeningLines({ relationshipStage, style, gender });
+    const options = await generateOpeningLines({ profile: profile.trim() });
 
     return NextResponse.json({
       options,

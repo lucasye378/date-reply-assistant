@@ -123,39 +123,20 @@ export async function generateReplySuggestions(
 // ============================================================
 
 interface OpenerParams {
-  relationshipStage: string;
-  style: string;
-  gender: string;
+  profile: string;
 }
 
-const OPENER_PROMPTS: Record<string, string> = {
-  "刚认识-男追女": "刚认识阶段，男生追女生。生成的开场白要自然不油腻，帮她容易接话。",
-  "刚认识-女追男": "刚认识阶段，女生追男生。生成的开场白要自信有趣，吸引对方注意。",
-  "暧昧期-男追女": "暧昧期，男生追女生。开场白可以稍微调皮一些，制造暧昧氛围。",
-  "暧昧期-女追男": "暧昧期，女生追男生。开场白可以自信一些，表达兴趣。",
-  "约会1-2次-男追女": "约会1-2次后，男生追女生。可以稍微放松一些，自然继续。",
-  "约会1-2次-女追男": "约会1-2次后，女生追男生。可以主动一些，延续约会氛围。",
-};
-
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
-  const { relationshipStage, style, gender } = params;
-  const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
-  const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
+  const { profile } = params;
 
-  const prompt = `情况：${context}${styleFilter}\n\n请给出3条开场白建议。`;
-
-  const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的约会开场白，每条不超过40字。
-输出格式（严格按这个，不要其他内容）：
-🥨 [开场白1]
-🧱 [开场白2]
-⚡ [开场白3]`;
+  const prompt = `对方 profile 内容：${profile}\n\n请根据这个 profile，生成3条不同风格的中文约会开场白，每条不超过40字。输出格式：
+🥨 [俏皮型开场白]
+🧱 [正经型开场白]
+⚡ [简短型开场白]`;
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
-    messages: [
-      { role: "system", content: openerSystem },
-      { role: "user", content: prompt },
-    ],
+    messages: [{ role: "user", content: prompt }],
     max_tokens: 800,
   });
 
