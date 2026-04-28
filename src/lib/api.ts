@@ -36,16 +36,55 @@ function extractOpener(response: any): string {
   const raw = c.message?.content || "";
   const reasoning = (c.message as any)?.reasoning_content || "";
 
-  // Strategy: split by sentence-ending punctuation to separate openers
+  // Use code points to find emoji positions reliably
+  const EMOJI_WAVE = String.fromCodePoint(0x1F9C8);   // 🥨
+  const EMOJI_BRICK = String.fromCodePoint(0x1F9F1); // 🧱
+  const EMOJI_BOLT = String.fromCodePoint(0x26A1);    // ⚡
+
   const text = stripThinking(reasoning) || stripThinking(raw);
 
-  // Split by 。！？ or emoji boundaries
-  // First try splitting by 。or！or？
+  // Try to extract opener text by finding emoji + Chinese after it
+  const results: string[] = [];
+  const emojis = [EMOJI_WAVE, EMOJI_BRICK, EMOJI_BOLT];
+  const labels = ["俏皮型", "正经型", "简短型"];
+
+  for (let ei = 0; ei < emojis.length; ei++) {
+    const emoji = emojis[ei];
+    const idx = text.indexOf(emoji);
+    if (idx >= 0) {
+      // Find Chinese text after this emoji
+      const after = text.substring(idx + emoji.length);
+      const chinese = after.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、\s]*/)?.[0];
+      if (chinese && chinese.trim().length > 3) {
+        results.push(emoji + " " + chinese.trim());
+        continue;
+      }
+    }
+    // Also try ASCII substitute versions
+    const substitutes: Record<number, string> = { 0x1F9C8: "俏皮", 0x1F9F1: "正经", 0x26A1: "简短" };
+    const sub = substitutes[ei];
+    if (sub) {
+      const subIdx = text.indexOf(sub);
+      if (subIdx >= 0) {
+        const afterSub = text.substring(subIdx + sub.length);
+        const chineseSub = afterSub.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、\s]*/)?.[0];
+        if (chineseSub && chineseSub.trim().length > 3) {
+          results.push(emoji + " " + chineseSub.trim());
+          continue;
+        }
+      }
+    }
+  }
+
+  if (results.length >= 3) {
+    return results.slice(0, 3).join("\n");
+  }
+
+  // Fallback: split by sentence-ending punctuation
   const sentences = text.split(/[。！？]/);
   const openers: string[] = [];
   for (const sent of sentences) {
     const trimmed = sent.trim();
-    // Only include if has enough Chinese chars (at least 5)
     const chineseChars = trimmed.match(/[\u4e00-\u9fa5]/g) || [];
     if (chineseChars.length >= 5) {
       openers.push(trimmed);
@@ -56,7 +95,6 @@ function extractOpener(response: any): string {
     return openers.slice(0, 3).join("\n");
   }
 
-  // Last resort: return text and let fallback parsing handle
   return text;
 }
 
