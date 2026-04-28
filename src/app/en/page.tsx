@@ -30,14 +30,13 @@ function SubscriptionModal({ onClose, onSubscribe, onBonus, loading, bonusUsed }
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Success example */}
+          {/* Social proof example */}
           <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4">
-            <div className="text-xs text-pink-600 font-medium mb-2">💡 What you'll get</div>
-            <div className="text-xs text-gray-600 mb-2">Someone sent:</div>
-            <div className="text-sm text-gray-800 italic mb-3">"hey, what's up? haven't heard from u in a while 😏"</div>
-            <div className="text-xs text-gray-500 mb-2">You reply:</div>
-            <div className="text-sm text-gray-900 font-medium">"haha been busy being amazing 😏 what about you?"</div>
-            <div className="text-xs text-green-600 mt-2">✓ They replied 20 min later</div>
+            <div className="text-xs text-gray-600 mb-2">She said:</div>
+            <div className="text-sm text-gray-800 italic mb-3">"今晚吃了啥？"</div>
+            <div className="text-xs text-gray-500 mb-2">AI reply suggestion:</div>
+            <div className="text-sm text-gray-900 font-medium mb-2">"刚吃了拉面，你呢？推荐他们家的牛肉面！"</div>
+            <div className="text-xs text-green-600">✓ Already helped 1000+ people with dating anxiety</div>
           </div>
 
           <button
@@ -125,14 +124,14 @@ export default function Home() {
   };
 
   const handleBonus = () => {
-    // Grant 3 bonus uses — once only per user
     const bonusUsed = localStorage.getItem(BONUS_USES_KEY);
     if (bonusUsed) return;
     localStorage.setItem(BONUS_USES_KEY, "true");
     const current = parseInt(localStorage.getItem(USES_KEY) || "0", 10);
-    const newCount = Math.max(0, current - 3) + 3; // Refund the 3 used, then grant 3 more
+    const newCount = Math.max(0, current - 3) + 3;
     localStorage.setItem(USES_KEY, String(newCount));
     setUsesCount(newCount);
+    setBonusUsed(true);
     setShowPaywall(false);
     fetch("/api/track", {
       method: "POST",
