@@ -54,8 +54,6 @@ export async function generateReplySuggestions(
       { role: "user", content: prompt },
     ],
     max_tokens: 800,
-    // @ts-ignore - MiniMax supports thinking: { type: "off" }
-    thinking: { type: "off" } as any,
   });
 
   const content = response.choices?.[0]?.message?.content || "";
@@ -130,21 +128,17 @@ const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { relationshipStage, style, gender } = params;
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
-  const styleFilter = style !== "不限" ? `${style}风格：` : "";
+  const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const userMsg = `${context}${styleFilter}
-
-Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3`;
+  const prompt = `场景：${context}${styleFilter}\n\n生成3条约会开场白，每条一行，格式：\n🌊 淡定自然风格的开场白\n😏 俏皮有趣风格的开场白\n⚡ 简短直接风格的开场白\n每条不超过40字。`;
 
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "You are a dating opener generator. Output exactly 3 lines, each a Chinese opener under 40 chars. Line1: calm. Line2: playful. Line3: short. Nothing else." },
-      { role: "user", content: `${context}${styleFilter}
-
-Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3` },
+      { role: "system", content: "你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]。每条不超过40字。不要解释，直接输出。" },
+      { role: "user", content: prompt },
     ],
-    max_tokens: 300,
+    max_tokens: 600,
   });
 
   const content = apiResponse.choices?.[0]?.message?.content || "";
@@ -164,7 +158,6 @@ Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3` },
     }
   }
 
-  // Fallback: emoji-based parsing
   if (options.length < 3) {
     for (const line of lines) {
       const trimmed = line.trim();
@@ -179,7 +172,6 @@ Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3` },
     }
   }
 
-  // Final fallback
   if (options.length < 3) {
     const fallbacks: ReplyOption[] = [
       { style: "淡定型", emoji: "🌊", text: "最近天气不错，约杯咖啡？" },
