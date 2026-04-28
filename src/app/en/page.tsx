@@ -304,7 +304,7 @@ export default function Home() {
 
   const handleUseThis = (option: ReplyOption) => {
     setSelectedOption(option);
-    setCustomReply(option.text);
+    setCustomReply(""); // Clear custom reply, show confirmation step first
   };
 
   const finalReply = customReply || selectedOption?.text || "";
@@ -485,8 +485,29 @@ export default function Home() {
           </div>
         )}
 
+        {/* Confirmation Step */}
+        {selectedOption && !customReply && (
+          <div className="mb-4 p-4 bg-pink-50 border border-pink-200 rounded-2xl text-center">
+            <p className="text-gray-800 mb-3">This looks good? 👍</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCustomReply(selectedOption.text)}
+                className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-medium hover:bg-pink-600 transition-colors"
+              >
+                Send it
+              </button>
+              <button
+                onClick={() => setSelectedOption(null)}
+                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300 transition-colors"
+              >
+                Pick another
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Copy + WhatsApp */}
-        {finalReply && (
+        {finalReply && !selectedOption && (
           <div className="space-y-3">
             <div className="p-4 bg-gray-100 rounded-2xl">
               <div className="text-xs text-gray-500 mb-1">Your reply:</div>

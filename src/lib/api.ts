@@ -30,29 +30,46 @@ function hasChineseText(s: string): boolean {
   return /[\u4e00-\u9fa5][\u4e00-\u9fa5]/.test(s);
 }
 
+// Extract opener text from MiniMax M2.7 response
+// content is often empty; reasoning_content has the actual text but may be mixed with thinking tags
 function extractOpenerText(response: any): string {
   const choice = response.choices?.[0];
   if (!choice) return "";
   const reasoning = (choice.message as any)?.reasoning_content || "";
   const content = choice.message?.content || "";
-  console.log("[OPENER] raw content:", content.substring(0, 300));
-  console.log("[OPENER] raw reasoning:", reasoning.substring(0, 300));
 
+  // Try content first if it has Chinese text
   const fromContent = stripThinking(content);
-  const fromReasoning = stripThinking(reasoning);
-  console.log("[OPENER] stripped content:", fromContent.substring(0, 200));
-  console.log("[OPENER] stripped reasoning:", fromReasoning.substring(0, 200));
-  console.log("[OPENER] hasChinese(fromContent):", hasChineseText(fromContent));
-  console.log("[OPENER] hasChinese(fromReasoning):", hasChineseText(fromReasoning));
-
-  if (hasChineseText(fromReasoning) && fromReasoning.length > 10) {
-    return fromReasoning;
-  }
   if (hasChineseText(fromContent) && fromContent.length > 10) {
     return fromContent;
   }
 
+  // reasoning_content: find longest contiguous Chinese text block
+  const fromReasoning = extractChineseBlock(stripThinking(reasoning));
+  if (fromReasoning.length > 5) {
+    return fromReasoning;
+  }
+
   return fromContent || fromReasoning;
+}
+
+// Extract longest contiguous Chinese text from a string (ignoring mixed English/tags)
+function extractChineseBlock(s: string): string {
+  let best = "";
+  let current = "";
+  for (const ch of s) {
+    if (/[\u4e00-\u9fa5]/.test(ch)) {
+      current += ch;
+      if (current.length > best.length) best = current;
+    } else if (/[\u3000-\u303f\uff00-\uffef]/.test(ch)) {
+      // Chinese punctuation — keep as part of block
+      current += ch;
+      if (current.length > best.length) best = current;
+    } else {
+      current = "";
+    }
+  }
+  return best.trim();
 }
 
 const SYSTEM_PROMPT = "你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。\n\n每次生成3个不同风格的回复建议，每个不超过40字：\n\n1. 俏皮/调侃型：有点调皮、幽默、轻松自信\n2. 正经回应型：真诚、有温度、认真回应对方\n3. 简短敷衍型：冷淡、简短、显得不那么在乎\n\n输出格式（严格按这个格式，不要其他内容）：\n🥨 [俏皮内容]\n🧱 [正经内容]\n🤷 [敷衍内容]";
