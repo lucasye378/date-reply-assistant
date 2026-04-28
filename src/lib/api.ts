@@ -199,15 +199,15 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const userPrompt = "对方profile：" + profile + "\n\n给出3条约会开场白，每条不超过40字。格式：1. 第1条\n2. 第2条\n3. 第3条。不要解释。";
+  const userPrompt = "对方profile：" + profile;
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: "You are a helpful assistant. Always respond with exactly 3 lines, numbered 1-2-3, no other text." },
+      { role: "system", content: "你是一个约会短信助手。用户需要约会开场白建议。\n\n每次生成3个不同风格的回复建议，每个不超过40字：\n\n1. 俏皮/调侃型：有点调皮、幽默、轻松自信\n2. 正经回应型：真诚、有温度、认真回应对方\n3. 简短敷衍型：冷淡、简短、显得不那么在乎\n\n输出格式（严格按这个格式，不要其他内容）：\n🥨 [俏皮内容]\n🧱 [正经内容]\n🤷 [敷衍内容]" },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 500,
+    max_tokens: 600,
     temperature: 0.3,
   });
 
