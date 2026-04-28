@@ -48,8 +48,8 @@ export async function generateReplySuggestions(
   context?: string
 ): Promise<ReplyOption[]> {
   const prompt = context
-    ? `对方说："${theirMessage}"\n背景：${context}\n\n请给出3个回复建议。`
-    : `对方说："${theirMessage}"\n\n请给出3个回复建议。`;
+    ? "对方说：\"" + theirMessage + "\"\n背景：" + context + "\n\n请给出3个回复建议。"
+    : "对方说：\"" + theirMessage + "\"\n\n请给出3个回复建议。";
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
@@ -70,13 +70,13 @@ export async function generateReplySuggestions(
     "🤷": "简短敷衍型",
   };
 
-  const lines = content.split("\n").filter((l) => l.trim());
+  const lines = content.split("\n").filter(function(l) { return l.trim(); });
   for (const line of lines) {
     const trimmed = line.trim();
     for (const [emoji, style] of Object.entries(emojiMap)) {
       if (trimmed.startsWith(emoji)) {
         const text = trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, "");
-        if (text) options.push({ style, emoji, text });
+        if (text) options.push({ style: style, emoji: emoji, text: text });
       }
     }
   }
@@ -88,7 +88,7 @@ export async function generateReplySuggestions(
       const emojis = ["🥨", "🧱", "🤷"];
       for (let i = 0; i < Math.min(numbered.length, 3); i++) {
         const text = numbered[i].replace(/^[1-3][.、]\s*/, "");
-        options.push({ style: styles[i], emoji: emojis[i], text });
+        options.push({ style: styles[i], emoji: emojis[i], text: text });
       }
     }
   }
@@ -127,19 +127,17 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     temperature: 0.3,
   });
 
-  // Extract content from response
+  // Extract: prefer reasoning_content for MiniMax M2.7
   const choice = response.choices?.[0];
   const content_raw = choice?.message?.content || "";
   const reasoning = (choice?.message as any)?.reasoning_content || "";
-
-  // Try reasoning_content first - MiniMax M2.7 puts actual reply there
-  const fromReasoning = reasoning.replace(/<think>[\s\S]*?</think>/g, "").trim();
+  const fromReasoning = stripThinking(reasoning);
   const content = hasChineseText(fromReasoning) && fromReasoning.length > 10
     ? fromReasoning
-    : content_raw.replace(/<think>[\s\S]*?</think>/g, "").trim();
+    : stripThinking(content_raw);
 
-  // Parse lines - split by newline
-  const lines = content.split("\n").filter((l) => l.trim().length > 2);
+  // Split by newlines and parse
+  const lines = content.split("\n").filter(function(l) { return l.trim().length > 2; });
 
   const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
   const emojis = ["🥨", "🧱", "🤷"];
@@ -147,15 +145,14 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
     const line = lines[i].trim();
-    // Strip emoji prefix and leading punctuation/numbers
     const text = line.replace(/^[🥨🧱⚡\d.、:：\-\s]+/, "").trim();
     if (text) {
-      options.push({ style: styles[i], emoji: emojis[i], text });
+      options.push({ style: styles[i], emoji: emojis[i], text: text });
     }
   }
 
+  // Emoji-based fallback
   if (options.length < 3) {
-    // Try emoji-based extraction as fallback
     const emojiMap: Record<string, string> = {
       "🥨": "俏皮/调侃型", "🧱": "正经回应型", "⚡": "简短敷衍型",
     };
@@ -164,8 +161,8 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
       for (const [emoji, style] of Object.entries(emojiMap)) {
         if (trimmed.startsWith(emoji)) {
           const text = trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, "").trim();
-          if (text && !options.find((o) => o.emoji === emoji)) {
-            options.push({ style, emoji, text });
+          if (text && !options.find(function(o) { return o.emoji === emoji; })) {
+            options.push({ style: style, emoji: emoji, text: text });
           }
         }
       }
