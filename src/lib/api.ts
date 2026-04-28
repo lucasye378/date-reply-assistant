@@ -154,10 +154,15 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 🧱 [正经型]
 ⚡ [简短型]`;
 
+  // Use MiniMax-M2.7 for opener (same API key, no extra cost)
   const response = await getClient().chat.completions.create({
-    model: "MiniMax-Text-01",
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 600,
+    model: "MiniMax-M2.7",
+    messages: [
+      { role: "system", content: "你是一个约会开场白助手。根据用户提供的对方profile信息，直接生成3条中文开场白。每条不超过40字。格式： emoji+空格+开场白文本。例如：🥨 你好呀～" },
+      { role: "user", content: prompt }
+    ],
+    max_tokens: 500,
+    reasoning_effort: "none",
   });
 
   const content = extractContent(response);
