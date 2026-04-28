@@ -136,10 +136,11 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: openerSystem },
+      { role: "system", content: "输出3条中文开场白，每条不超过20字。不要解释。" },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 600,
+    max_tokens: 200,
+    temperature: 0.3,
   });
 
   const content = apiResponse.choices?.[0]?.message?.content || "";
