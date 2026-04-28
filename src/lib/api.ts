@@ -69,7 +69,7 @@ export async function generateReplySuggestions(
     max_tokens: 800,
   });
 
-  const content = extractContent(response);
+  const content = response.choices?.[0]?.message?.content || "";
 
   const options: ReplyOption[] = [];
 
@@ -145,7 +145,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     max_tokens: 300,
   });
 
-  const content = extractContent(response);
+  const content = response.choices?.[0]?.message?.content || "";
 
   const lines = content.split("\n").filter((l) => l.trim());
   const styleMap: Record<number, { emoji: string; label: string }> = {
