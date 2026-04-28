@@ -135,6 +135,8 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const content = hasChineseText(fromReasoning) && fromReasoning.length > 10
     ? fromReasoning
     : stripThinking(content_raw);
+  console.log("[OPENER DEBUG] reasoning:", reasoning.substring(0, 200));
+  console.log("[OPENER DEBUG] content_raw:", content_raw.substring(0, 200));
 
   // Split by newlines and parse
   const lines = content.split("\n").filter(function(l) { return l.trim().length > 2; });
