@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+function getStripe(): Stripe | null {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: "2026-04-22.dahlia",
   });
 }
@@ -18,6 +21,10 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = getStripe();
+    if (!stripe) {
+      // Stripe not configured - return inactive (frontend should fall back to localStorage)
+      return NextResponse.json({ active: false, configured: false });
+    }
 
     // Search for customer by email
     const customers = await stripe.customers.list({
