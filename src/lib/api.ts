@@ -38,7 +38,7 @@ function extractOpener(response: any): string {
 
   // Find Chinese character sequences in reasoning_content
   const chineseSeqs = reasoning.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、：；～~\d\s]*/g) || [];
-  const longEnough = chineseSeqs.filter((s) => s.trim().length > 5);
+  const longEnough = chineseSeqs.filter(function(s: string) { return s.trim().length > 5; });
   if (longEnough.length >= 3) {
     return longEnough.slice(0, 3).join("\n").replace(/\n+/g, "\n").trim();
   }
@@ -46,7 +46,7 @@ function extractOpener(response: any): string {
   // Try content after stripping thinking
   const fromContent = stripThinking(raw);
   const contentSeqs = fromContent.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、：；～~\d\s]*/g) || [];
-  const contentLongEnough = contentSeqs.filter((s) => s.trim().length > 5);
+  const contentLongEnough = contentSeqs.filter(function(s: string) { return s.trim().length > 5; });
   if (contentLongEnough.length >= 3) {
     return contentLongEnough.slice(0, 3).join("\n").replace(/\n+/g, "\n").trim();
   }
