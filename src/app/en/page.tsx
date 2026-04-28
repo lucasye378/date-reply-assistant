@@ -93,16 +93,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [contentVariant, setContentVariant] = useState("a");
 
   useEffect(() => {
-    // Read A/B test variant from URL
-    const params = new URLSearchParams(window.location.search);
-    const variant = params.get("utm_content");
-    if (variant) {
-      setContentVariant(variant);
-    }
-
     const stored = localStorage.getItem(USES_KEY);
     setUsesCount(stored ? parseInt(stored, 10) : 0);
     setIsSubscribed(localStorage.getItem(SUBSCRIBED_KEY) === "true");
@@ -115,11 +107,11 @@ export default function Home() {
       window.history.replaceState({}, "", window.location.pathname);
     }
 
-    // Track page view with variant
+    // Track page view
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "page_view", feature: "FeatureA", path: "/en", variant: contentVariant }),
+      body: JSON.stringify({ action: "page_view", feature: "FeatureA", path: "/en" }),
     }).catch(() => {});
   }, []);
 
@@ -266,27 +258,14 @@ export default function Home() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-8">
-        {/* Hero - A/B tested */}
+        {/* Hero */}
         <div className="text-center mb-10">
-          {contentVariant === "b" ? (
-            <>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Stop staring at your phone. Get 3 reply options.
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                Paste what they sent. Pick a reply. Done in 10 seconds.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Got a message you don't know how to reply to?
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                Get 3 different response options. Choose one, send it, move on.
-              </p>
-            </>
-          )}
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            Got a message you don't know how to reply to?
+          </h2>
+          <p className="text-lg text-gray-600 mb-6">
+            Get 3 different response options. Choose one, send it, move on.
+          </p>
           <button
             onClick={() => textareaRef.current?.focus()}
             className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 transition-colors mb-3"

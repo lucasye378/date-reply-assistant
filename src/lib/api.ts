@@ -32,8 +32,20 @@ export interface ReplyOption {
   style: string;
   emoji: string;
   text: string;
-  scene?: string;
 }
+
+const OPENER_SYSTEM_PROMPT = `You are a dating opener coach. The user just matched with someone and needs an opening line.
+
+Generate 3 opening lines in different styles, each under 30 characters:
+
+1. 🥨 Playful: Flirty, playful, makes them smile
+2. 😊 Warm: Friendly, genuine, approachable
+3. 🤔 Curious: Asks a fun question to start conversation
+
+Output format (strictly follow this, no other content):
+🥨 [playful opener]
+😊 [warm opener]
+🤔 [curious opener]`
 
 export async function generateReplySuggestions(
   theirMessage: string,
@@ -99,41 +111,18 @@ export async function generateReplySuggestions(
   return options.slice(0, 3);
 }
 
-// ============================================================
-// Feature C: Opening Line Generator
-// ============================================================
+export async function generateOpeningLines(
+  context: string,
+  style?: string
+): Promise<ReplyOption[]> {
+  const prompt = `Dating situation: ${context}
 
-interface OpenerParams {
-  relationshipStage: string;
-  style: string;
-  gender: string;
-}
-
-const OPENER_PROMPTS: Record<string, string> = {
-  "刚认识-男追女": "刚认识阶段，男生追女生。生成的开场白要自然不油腻，帮她容易接话。",
-  "刚认识-女追男": "刚认识阶段，女生追男生。生成的开场白要自信有趣，吸引对方注意。",
-  "暧昧期-男追女": "暧昧期，男生追女生。开场白可以稍微调皮一些，制造暧昧氛围。",
-  "暧昧期-女追男": "暧昧期，女生追男生。开场白可以自信一些，表达兴趣。",
-  "约会1-2次-男追女": "约会1-2次后，男生追女生。可以稍微放松一些，自然继续。",
-  "约会1-2次-女追男": "约会1-2次后，女生追男生。可以主动一些，延续约会氛围。",
-};
-
-const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
-  "🌊": "淡定型",
-  "😏": "俏皮型",
-  "⚡": "简短型",
-};
-
-export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
-  const { relationshipStage, style, gender } = params;
-  const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
-  const styleFilter = style !== "不限" ? `优先使用 ${style} 风格，` : "";
-
-  const prompt = `${context}\n${styleFilter}生成3条不同风格的开场白，每条不超过30字。\n\n输出格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]`;
+Give me 3 opening lines to start the conversation.`;
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
+      { role: "system", content: OPENER_SYSTEM_PROMPT },
       { role: "user", content: prompt },
     ],
     max_tokens: 600,
@@ -142,11 +131,16 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const content = response.choices?.[0]?.message?.content || "";
 
   const options: ReplyOption[] = [];
+  const emojiMap: Record<string, string> = {
+    "🥨": "Playful",
+    "😊": "Warm",
+    "🤔": "Curious",
+  };
 
   const lines = content.split("\n").filter((l) => l.trim());
   for (const line of lines) {
     const trimmed = line.trim();
-    for (const [emoji, styleLabel] of Object.entries(OPENER_STYLES)) {
+    for (const [emoji, styleLabel] of Object.entries(emojiMap)) {
       if (trimmed.startsWith(emoji)) {
         const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
         if (text) options.push({ style: styleLabel, emoji, text });
@@ -154,16 +148,26 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     }
   }
 
-  // Fallback
+  // Fallback: try numbered list
   if (options.length < 3) {
-    const fallbacks: ReplyOption[] = [
-      { style: "淡定型", emoji: "🌊", text: "最近天气不错，约杯咖啡？", scene: "刚认识，正经" },
-      { style: "俏皮型", emoji: "😏", text: "刷到你好几次了，不约可惜", scene: "暧昧期，俏皮" },
-      { style: "简短型", emoji: "⚡", text: "在干嘛？", scene: "任意，简单直接" },
-    ];
-    while (options.length < 3) {
-      options.push(fallbacks[options.length]);
+    const numbered = content.match(/^[1-3][.、]\s*(.+)/gm);
+    if (numbered) {
+      const styles = ["Playful", "Warm", "Curious"];
+      const emojis = ["🥨", "😊", "🤔"];
+      for (let i = 0; i < Math.min(numbered.length, 3); i++) {
+        const text = numbered[i].replace(/^[1-3][.、]\s*/, "");
+        options.push({ style: styles[i], emoji: emojis[i], text });
+      }
     }
+  }
+
+  // Final fallback
+  if (options.length === 0) {
+    return [
+      { style: "Playful", emoji: "🥨", text: "So... what made you swipe right on me? 😏" },
+      { style: "Warm", emoji: "😊", text: "Hey! How's your day going?" },
+      { style: "Curious", emoji: "🤔", text: "Quick question — what's the most interesting thing you've read recently?" },
+    ];
   }
 
   return options.slice(0, 3);
