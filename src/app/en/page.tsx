@@ -1,10 +1,29 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ReplyOption } from "@/lib/api";
 
 const FREE_USES_LIMIT = 3;
 const USES_KEY = "date-reply-en-uses";
+const HERO_VARIANTS = {
+  a: {
+    headline: "Not sure what to send?",
+    sub: "Don't guess — pick from 3 options. You choose, you send.",
+    cta: "Try Free — 3 options in 3 seconds",
+  },
+  b: {
+    headline: "Stop overthinking your replies",
+    sub: "Get 3 options, pick one, send it. Move on with your day.",
+    cta: "Get My 3 Options — Free",
+  },
+  c: {
+    headline: "Your date texted back. Now what?",
+    sub: "Don't leave them waiting. Get the perfect reply in 3 seconds.",
+    cta: "Try It Free — 3 Options",
+  },
+} as const;
+
 const SUBSCRIBED_KEY = "date-reply-en-subscribed";
 const BONUS_USES_KEY = "date-reply-en-bonus-used";
 
@@ -79,6 +98,7 @@ function SubscriptionModal({ onClose, onSubscribe, onBonus, loading, bonusUsed }
 }
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [theirMessage, setTheirMessage] = useState("");
   const [options, setOptions] = useState<ReplyOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ReplyOption | null>(null);
@@ -98,6 +118,7 @@ export default function Home() {
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [heroVariant, setHeroVariant] = useState<"a" | "b" | "c">("a");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -112,6 +133,12 @@ export default function Home() {
       setShowVerifyPayment(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
+
+    // A/B test: read hero variant from utm_content param
+    const utmContent = params.get("utm_content");
+    if (utmContent === "variant_b") setHeroVariant("b");
+    else if (utmContent === "variant_c") setHeroVariant("c");
+    else setHeroVariant("a");
 
     // Track page view
     fetch("/api/track", {
@@ -347,16 +374,16 @@ export default function Home() {
         {/* Hero */}
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
-            Not sure what to send?
+            {HERO_VARIANTS[heroVariant].headline}
           </h2>
           <p className="text-lg text-gray-600 mb-6">
-            Don&apos;t guess — pick from 3 options. You choose, you send.
+            {HERO_VARIANTS[heroVariant].sub}
           </p>
           <button
             onClick={() => textareaRef.current?.focus()}
             className="w-full py-4 bg-pink-500 text-white rounded-2xl font-medium text-lg hover:bg-pink-600 transition-colors mb-3"
           >
-            Try Free — 3 options in 3 seconds
+            {HERO_VARIANTS[heroVariant].cta}
           </button>
           <div className="flex items-center justify-between">
             <span className="inline-block bg-pink-100 text-pink-700 text-sm font-medium px-4 py-2 rounded-full">
