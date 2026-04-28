@@ -60,8 +60,6 @@ export async function POST(request: NextRequest) {
     });
 
     const options = await generateOpeningLines({ profile: profile.trim() });
-    console.log("[opener route] options:", JSON.stringify(options).substring(0, 500));
-
     return NextResponse.json({
       options,
       unlimited: false,
