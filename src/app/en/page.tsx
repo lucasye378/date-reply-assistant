@@ -338,8 +338,13 @@ export default function Home() {
           >
             Try Free — 3 options in 3 seconds
           </button>
-          <div className="inline-block bg-pink-100 text-pink-700 text-sm font-medium px-4 py-2 rounded-full">
-            No signup needed. No data saved.
+          <div className="flex items-center justify-between">
+            <span className="inline-block bg-pink-100 text-pink-700 text-sm font-medium px-4 py-2 rounded-full">
+              No signup needed. No data saved.
+            </span>
+            <span className="text-sm text-gray-400">
+              Pro <span className="font-semibold text-gray-600">$9.99/mo</span> · cancel anytime
+            </span>
           </div>
         </div>
 
