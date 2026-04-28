@@ -155,9 +155,9 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
 ⚡ [简短型]`;
 
   const response = await getClient().chat.completions.create({
-    model: "MiniMax-M2.7",
+    model: "MiniMax-Text-01",
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 800,
+    max_tokens: 600,
   });
 
   const content = extractContent(response);
