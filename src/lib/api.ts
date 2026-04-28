@@ -15,10 +15,6 @@ function getClient(): OpenAI {
   return client;
 }
 
-function hasChineseText(s: string): boolean {
-  return /[\u4e00-\u9fa5][\u4e00-\u9fa5]/.test(s);
-}
-
 function stripThinking(raw: string): string {
   let r = raw;
   for (;;) {
@@ -37,48 +33,27 @@ function extractOpener(response: any): string {
   const raw = c.message?.content || "";
   const text = stripThinking(reasoning) || stripThinking(raw);
 
-  // Strategy: split by 。！？ to get sentences, pick ones with most Chinese chars
-  // This avoids emoji encoding issues entirely
-  const sentences = text.split(/[。！？]/);
-  const scored: { text: string; score: number }[] = [];
+  // Split by sentence-ending punctuation and take top-scored sentences
+  const sentences = text.split(/[。！？\n]/);
+  const scored: string[] = [];
   for (const sent of sentences) {
     const trimmed = sent.trim();
-    if (trimmed.length < 4) continue;
+    if (trimmed.length < 6) continue;
     const chineseChars = (trimmed.match(/[\u4e00-\u9fa5]/g) || []).length;
     if (chineseChars >= 4) {
-      scored.push({ text: trimmed, score: chineseChars });
+      scored.push(trimmed);
     }
   }
 
-  // Sort by Chinese char count (more = better opener likely)
-  scored.sort(function(a, b) { return b.score - a.score; });
-
-  // Take top 3 and join
   if (scored.length >= 3) {
-    return scored[0].text + "\n" + scored[1].text + "\n" + scored[2].text;
+    return scored[0] + "\n" + scored[1] + "\n" + scored[2];
   }
-  if (scored.length === 2) {
-    return scored[0].text + "\n" + scored[1].text;
-  }
-  if (scored.length === 1) {
-    return scored[0].text;
-  }
-
+  if (scored.length === 2) return scored[0] + "\n" + scored[1];
+  if (scored.length === 1) return scored[0];
   return text;
 }
 
-const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
-
-每次生成3个不同风格的回复建议，每个不超过40字：
-
-1. 俏皮/调侃型：有点调皮、幽默、轻松自信
-2. 正经回应型：真诚、有温度、认真回应对方
-3. 简短敷衍型：冷淡、简短、显得不那么在乎
-
-输出格式（严格按这个格式，不要其他内容）：
-🥨 [俏皮内容]
-🧱 [正经内容]
-🤷 [敷衍内容]`;
+const SYSTEM_PROMPT = "你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。\n\n每次生成3个不同风格的回复建议，每个不超过40字：\n\n1. 俏皮/调侃型：有点调皮、幽默、轻松自信\n2. 正经回应型：真诚、有温度、认真回应对方\n3. 简短敷衍型：冷淡、简短、显得不那么在乎\n\n输出格式（严格按这个格式，不要其他内容）：\n🥨 [俏皮内容]\n🧱 [正经内容]\n🤷 [敷衍内容]";
 
 export interface ReplyOption {
   style: string;
@@ -163,61 +138,48 @@ interface OpenerParams {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { profile } = params;
 
-  const userPrompt = `对方profile：${profile}\n\n直接输出3条中文开场白，每条不超过40字。格式：\n🥨 [俏皮型开场白]\n🧱 [正经型开场白]\n⚡ [简短型开场白]`;
-
-  const systemPrompt = "你是一个约会开场白助手。直接输出3条开场白，每条不超过40字。格式：🥨+空格+开场白。直接输出内容，不要解释。";
+  const userPrompt = "对方profile：" + profile + "\n\n请给出3条约会开场白，每条40字以内。直接分3行输出，不要其他文字。";
 
   const response = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: "你是一个约会短信助手。用户需要约会开场白建议。每次输出3条，每条40字以内。直接输出分3行，不要解释。" },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 500,
+    max_tokens: 600,
     temperature: 0.3,
   });
 
   const content = extractOpener(response);
 
-  const lines = content.split("\n").filter((l) => l.trim());
-  const styleMap: Record<number, { emoji: string; label: string }> = {
-    0: { emoji: "🥨", label: "俏皮型" },
-    1: { emoji: "🧱", label: "正经型" },
-    2: { emoji: "⚡", label: "简短型" },
-  };
-
-  const options: ReplyOption[] = [];
-  for (let i = 0; i < Math.min(lines.length, 3); i++) {
-    const line = lines[i].trim();
-    const text = line.replace(/^[🥨🧱⚡]\s*/, "").trim();
-    if (text) {
-      options.push({ style: styleMap[i].label, emoji: styleMap[i].emoji, text });
+  // Parse numbered lines or fallbacks
+  const numbered = content.match(/^[1-9][.、:：]\s*(.+)/gm);
+  if (numbered && numbered.length >= 3) {
+    const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
+    const emojis = ["🥨", "🧱", "🤷"];
+    const options: ReplyOption[] = [];
+    for (let i = 0; i < Math.min(numbered.length, 3); i++) {
+      const text = numbered[i].replace(/^[1-9][.、:：]\s*/, "").trim();
+      if (text) options.push({ style: styles[i], emoji: emojis[i], text });
     }
+    if (options.length === 3) return options;
   }
 
-  // Fallback: emoji-based extraction
-  if (options.length < 3) {
-    const emojiMap: Record<string, string> = {
-      "🥨": "俏皮型", "🧱": "正经型", "⚡": "简短型",
-    };
-    for (const line of lines) {
-      const trimmed = line.trim();
-      for (const [emoji, label] of Object.entries(emojiMap)) {
-        if (trimmed.startsWith(emoji)) {
-          const text = trimmed.slice(emoji.length).trim().replace(/^[-:：]\s*/, "").trim();
-          if (text && !options.find((o) => o.emoji === emoji)) {
-            options.push({ style: label, emoji, text });
-          }
-        }
-      }
-    }
+  // Fallback: split by newlines and assign styles
+  const lines = content.split("\n").filter((l) => l.trim().length > 3);
+  const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
+  const emojis = ["🥨", "🧱", "🤷"];
+  const options: ReplyOption[] = [];
+  for (let i = 0; i < Math.min(lines.length, 3); i++) {
+    const text = lines[i].trim().replace(/^[🥨🧱⚡]\s*/, "").trim();
+    if (text) options.push({ style: styles[i], emoji: emojis[i], text });
   }
 
   if (options.length < 3) {
     const fallbacks: ReplyOption[] = [
-      { style: "俏皮型", emoji: "🥨", text: "刷到你好几次了，不约可惜～" },
-      { style: "正经型", emoji: "🧱", text: "看到你也喜欢爬山，下次一起？" },
-      { style: "简短型", emoji: "⚡", text: "在干嘛？" },
+      { style: "俏皮/调侃型", emoji: "🥨", text: "刷到你好几次了，不约可惜～" },
+      { style: "正经回应型", emoji: "🧱", text: "看到你也喜欢爬山，下次一起？" },
+      { style: "简短敷衍型", emoji: "🤷", text: "在干嘛？" },
     ];
     while (options.length < 3) {
       options.push(fallbacks[options.length]);
