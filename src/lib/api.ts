@@ -30,6 +30,29 @@ function hasChineseText(s: string): boolean {
   return /[\u4e00-\u9fa5][\u4e00-\u9fa5]/.test(s);
 }
 
+// Extract opener text from MiniMax M2.7 response
+// Priority: reasoning_content > content (both stripped of thinking tags)
+function extractOpenerText(response: any): string {
+  const choice = response.choices?.[0];
+  if (!choice) return "";
+  const reasoning = (choice.message as any)?.reasoning_content || "";
+  const content = choice.message?.content || "";
+
+  // Try reasoning_content first
+  const fromReasoning = stripThinking(reasoning);
+  if (hasChineseText(fromReasoning) && fromReasoning.length > 10) {
+    return fromReasoning;
+  }
+
+  // Fallback to content
+  const fromContent = stripThinking(content);
+  if (hasChineseText(fromContent) && fromContent.length > 10) {
+    return fromContent;
+  }
+
+  return fromContent || fromReasoning;
+}
+
 const SYSTEM_PROMPT = "你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。\n\n每次生成3个不同风格的回复建议，每个不超过40字：\n\n1. 俏皮/调侃型：有点调皮、幽默、轻松自信\n2. 正经回应型：真诚、有温度、认真回应对方\n3. 简短敷衍型：冷淡、简短、显得不那么在乎\n\n输出格式（严格按这个格式，不要其他内容）：\n🥨 [俏皮内容]\n🧱 [正经内容]\n🤷 [敷衍内容]";
 
 export interface ReplyOption {
@@ -127,30 +150,29 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
     temperature: 0.3,
   });
 
-  // Extract: prefer reasoning_content for MiniMax M2.7
-  const choice = response.choices?.[0];
-  const content_raw = choice?.message?.content || "";
-  const reasoning = (choice?.message as any)?.reasoning_content || "";
-  const fromReasoning = stripThinking(reasoning);
-  const content = hasChineseText(fromReasoning) && fromReasoning.length > 10
-    ? fromReasoning
-    : stripThinking(content_raw);
-  console.log("[OPENER DEBUG] reasoning:", reasoning.substring(0, 300));
-  console.log("[OPENER DEBUG] content_raw:", content_raw.substring(0, 300));
-  console.log("[OPENER DEBUG] fromReasoning:", fromReasoning.substring(0, 200));
-  console.log("[OPENER DEBUG] content:", content.substring(0, 200));
+  const content = extractOpenerText(response);
 
-  // Split by newlines and parse
-  const lines = content.split("\n").filter(function(l) { return l.trim().length > 2; });
-  console.log("[OPENER DEBUG] lines:", lines);
+  // Parse: try numbered lines first
+  const numbered = content.match(/^[1-9][.、:：]\s*(.+)/gm);
+  if (numbered && numbered.length >= 3) {
+    const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
+    const emojis = ["🥨", "🧱", "🤷"];
+    const options: ReplyOption[] = [];
+    for (let i = 0; i < Math.min(numbered.length, 3); i++) {
+      const text = numbered[i].replace(/^[1-9][.、:：]\s*/, "").trim();
+      if (text) options.push({ style: styles[i], emoji: emojis[i], text: text });
+    }
+    if (options.length === 3) return options;
+  }
 
+  // Split by newlines and assign styles
+  const lines = content.split("\n").filter(function(l) { return l.trim().length > 3; });
   const styles = ["俏皮/调侃型", "正经回应型", "简短敷衍型"];
   const emojis = ["🥨", "🧱", "🤷"];
   const options: ReplyOption[] = [];
 
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
-    const line = lines[i].trim();
-    const text = line.replace(/^[🥨🧱⚡\d.、:：\-\s]+/, "").trim();
+    const text = lines[i].trim().replace(/^[🥨🧱⚡\d.、:：\-\s]+/, "").trim();
     if (text) {
       options.push({ style: styles[i], emoji: emojis[i], text: text });
     }
