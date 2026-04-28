@@ -133,7 +133,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `优先使用 ${style} 风格，` : "";
 
-  const prompt = `${context}\n${styleFilter}生成3条不同风格的开场白，每条不超过40字。\n\n输出格式：\n🌊 [淡定型开场白]\n😏 [俏皮型开场白]\n⚡ [简短型开场白]`;
+  const prompt = `${context}\n${styleFilter}生成3条不同风格的开场白，每条不超过40字。\n\n输出格式：\n🌊 实际开场白内容（不用写"淡定型"等标签，只写句子本身）\n😏 实际开场白内容\n⚡ 实际开场白内容\n\n示例：\n🌊 最近天气不错，约杯咖啡？\n😏 刷到你好几次了，不约可惜\n⚡ 在干嘛？`;
 
   const systemPrompt = "你是一个约会助手。严格按以下JSON格式输出，不要其他内容：{"openers":[{"style":"🌊淡定型","text":"具体开场白"},{"style":"😏俏皮型","text":"具体开场白"},{"style":"⚡简短型","text":"具体开场白"}]}";
 
@@ -172,7 +172,9 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
       const trimmed = line.trim();
       for (const [, { emoji, label }] of Object.entries(OPENER_STYLES)) {
         if (trimmed.startsWith(emoji)) {
-          const text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
+          let text = trimmed.slice(emoji.length).trim().replace(/^[-–:：]\s*/, "");
+          // Strip any remaining bracket labels like [淡定型开场白]
+          text = text.replace(/\[.*?\]/g, "").trim();
           if (text) options.push({ style: label, emoji, text });
         }
       }
