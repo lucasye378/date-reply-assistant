@@ -15,6 +15,10 @@ function getClient(): OpenAI {
   return client;
 }
 
+function hasChineseText(s: string): boolean {
+  return /[\u4e00-\u9fa5][\u4e00-\u9fa5]/.test(s);
+}
+
 function stripThinking(raw: string): string {
   let r = raw;
   for (;;) {
@@ -30,34 +34,22 @@ function extractOpener(response: any): string {
   const c = response.choices?.[0];
   if (!c) return "";
   const raw = c.message?.content || "";
+  const reasoning = (c.message as any)?.reasoning_content || "";
 
-  // Try to find emoji + Chinese text segments
-  // Use a simple approach: look for known emoji markers followed by Chinese
-  const marker1 = String.fromCharCode(0xF0, 0x9F, 0xA5, 0xA8); // 🥨
-  const marker2 = String.fromCharCode(0xF0, 0x9F, 0xA5, 0xB1); // 🧱
-  const marker3 = String.fromCharCode(0xE2, 0x9A, 0xA1);       // ⚡
-
-  const lines: string[] = [];
-  const markers = [marker1, marker2, marker3];
-
-  for (const m of markers) {
-    const idx = raw.indexOf(m);
-    if (idx >= 0) {
-      const after = raw.substring(idx + m.length);
-      // Find Chinese text sequence
-      const match = after.match(/[\u4e00-\u9fa5][\u4e00-\u9fa5，。！？、：；～~\d\s]*/);
-      if (match && match[0].length > 3) {
-        lines.push(m + " " + match[0].trim());
-      }
-    }
+  // Try reasoning_content first (MiniMax M2.7 puts actual reply there)
+  if (hasChineseText(reasoning)) {
+    const cleaned = stripThinking(reasoning);
+    if (cleaned.length > 10) return cleaned;
   }
 
-  if (lines.length >= 3) {
-    return lines.slice(0, 3).join("\n");
+  // Try content after stripping thinking
+  const fromContent = stripThinking(raw);
+  if (hasChineseText(fromContent) && fromContent.length > 10) {
+    return fromContent;
   }
 
-  // Fallback: strip thinking and return raw
-  return stripThinking(raw);
+  // Return whatever we have
+  return fromContent || reasoning || raw;
 }
 
 const SYSTEM_PROMPT = `你是一个约会短信助手。用户是在约会早期不知道怎么回复暧昧对象短信的人。
