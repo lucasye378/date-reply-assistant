@@ -116,17 +116,27 @@ export default function OpenerPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
             <div className="text-center mb-4">
-              <div className="text-3xl mb-2">✨</div>
-              <h2 className="text-xl font-bold text-gray-900">Free Openers Exhausted</h2>
-              <p className="text-gray-500 text-sm mt-1">Get unlimited opening lines · $9.99/month</p>
+              <div className="text-3xl mb-2">💬</div>
+              <h2 className="text-xl font-bold text-gray-900">Free Openers Used Today</h2>
+              <p className="text-gray-500 text-sm mt-1">Come back tomorrow for 3 more free openers</p>
             </div>
-            <div className="space-y-3">
-              <a href="https://buy.stripe.com/test_4gM00j4Eg5xIbFAayWcjS0a" className="block w-full py-3 bg-pink-500 text-white text-center rounded-xl font-medium hover:bg-pink-600">
-                Unlock Pro
+
+            {/* Promote Reply feature */}
+            <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4 mb-4">
+              <div className="text-sm font-medium text-gray-800 mb-2">Want unlimited reply suggestions instead?</div>
+              <p className="text-xs text-gray-600 mb-3">Get 3 reply options for any message you receive — for smoother dates.</p>
+              <a href="https://buy.stripe.com/test_4gM00j4Eg5xIbFAayWcjS0a" className="block w-full py-2.5 bg-pink-500 text-white text-center rounded-xl text-sm font-medium hover:bg-pink-600">
+                Unlock Reply Assistant · $9.99/month
               </a>
-              <Link href="/en" className="block w-full py-3 text-center text-gray-500 text-sm hover:text-gray-700">
-                ← Reply Assistant
+            </div>
+
+            <div className="space-y-2">
+              <Link href="/en" className="block w-full py-2.5 text-center text-pink-600 text-sm font-medium hover:text-pink-700">
+                Try Reply Assistant (3 free uses)
               </Link>
+              <button onClick={() => setShowPaywall(false)} className="w-full py-2 text-gray-400 text-sm hover:text-gray-600">
+                Close
+              </button>
             </div>
           </div>
         </div>

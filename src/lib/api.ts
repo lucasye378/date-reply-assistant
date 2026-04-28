@@ -131,20 +131,9 @@ const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { relationshipStage, style, gender } = params;
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
-  const styleFilter = style !== "不限" ? `优先使用 ${style} 风格，` : "";
+  const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const prompt = `${context}\n${styleFilter}生成3条不同风格的开场白，每条不超过40字。\n\n输出格式：\n🌊 实际开场白内容（不用写"淡定型"等标签，只写句子本身）\n😏 实际开场白内容\n⚡ 实际开场白内容\n\n示例：\n🌊 最近天气不错，约杯咖啡？\n😏 刷到你好几次了，不约可惜\n⚡ 在干嘛？`;
-
-  const systemPrompt = "你是一个约会助手。严格按以下JSON格式输出，不要其他内容：{"openers":[{"style":"🌊淡定型","text":"具体开场白"},{"style":"😏俏皮型","text":"具体开场白"},{"style":"⚡简短型","text":"具体开场白"}]}";
-
-  const response = await getClient().chat.completions.create({
-    model: "MiniMax-M2.7",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt },
-    ],
-    max_tokens: 600,
-  });
+  const prompt = `${context}${styleFilter}\n\n请生成3条约会开场白，每条一行，顺序是：1)淡定自然 2)俏皮有趣 3)简短直接。每条不超过40字。直接输出句子，不要格式符号。"}]
 
   const content = response.choices?.[0]?.message?.content || "";
 
