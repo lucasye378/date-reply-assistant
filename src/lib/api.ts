@@ -132,7 +132,7 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
   const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
 
-  const userPrompt = `${context}${styleFilter}\nWrite 3 Chinese dating opener lines. Each under 40 characters. Output exactly 3 lines, nothing else. Line 1: calm natural. Line 2: playful. Line 3: short direct.`;
+  const userPrompt = `情况：${context}${styleFilter}\n\n请给出3条开场白建议。`;
 
   const openerSystem = `你是一个约会开场白助手。每次生成3条不同风格的开场白，格式：
 🌊 [淡定型开场白]
@@ -145,7 +145,8 @@ export async function generateOpeningLines(params: OpenerParams): Promise<ReplyO
       { role: "system", content: openerSystem },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 400,
+    max_tokens: 800,
+    temperature: 0.7,
   });
 
   const content = extractContent(response);
