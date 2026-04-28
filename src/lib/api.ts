@@ -130,15 +130,11 @@ const OPENER_STYLES: Record<string, { emoji: string; label: string }> = {
 export async function generateOpeningLines(params: OpenerParams): Promise<ReplyOption[]> {
   const { relationshipStage, style, gender } = params;
   const context = OPENER_PROMPTS[`${relationshipStage}-${gender}`] || "刚认识阶段，轻松自然的开场白。";
-  const styleFilter = style !== "不限" ? `（优先${style}风格）` : "";
+  const styleFilter = style !== "不限" ? `${style}风格：` : "";
 
-  const prompt = `场景：${context}${styleFilter}
+  const userMsg = `${context}${styleFilter}
 
-生成3条约会开场白，每条一行，格式：
-🌊 淡定自然风格的开场白
-😏 俏皮有趣风格的开场白
-⚡ 简短直接风格的开场白
-每条不超过40字。`;
+Output 3 Chinese opener lines only. Format: 🌊 line1 😏 line2 ⚡ line3`;
 
   const apiResponse = await getClient().chat.completions.create({
     model: "MiniMax-M2.7",
