@@ -74,7 +74,7 @@ export default function OpenerPage() {
       const res = await fetch("/api/opener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ relationshipStage, style, gender }),
+        body: JSON.stringify({ relationshipStage, style, gender, subscribed: isSubscribed }),
       });
       const data = await res.json();
       if (data.options) {
@@ -84,6 +84,9 @@ export default function OpenerPage() {
           setUsesCount(newCount);
           localStorage.setItem(USES_KEY, String(newCount));
         }
+      } else if (data.error === "daily_limit_reached") {
+        setShowPaywall(true);
+      }
         fetch("/api/track", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

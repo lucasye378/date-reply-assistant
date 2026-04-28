@@ -89,6 +89,10 @@ export default function Home() {
   const [usesCount, setUsesCount] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [bonusUsed, setBonusUsed] = useState(false);
+  const [showVerifyPayment, setShowVerifyPayment] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
   const [copied, setCopied] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -101,8 +105,8 @@ export default function Home() {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("subscribed") === "true") {
-      localStorage.setItem(SUBSCRIBED_KEY, "true");
-      setIsSubscribed(true);
+      // Show payment verification screen instead of auto-subscribing
+      setShowVerifyPayment(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
 
@@ -138,6 +142,31 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "bonus_granted", feature: "FeatureA" }),
     }).catch(() => {});
+  };
+
+  const handleVerifyPayment = async () => {
+    if (!verifyEmail.trim()) return;
+    setVerifyingPayment(true);
+    setVerifyError("");
+    try {
+      const res = await fetch("/api/subscription-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: verifyEmail.trim() }),
+      });
+      const data = await res.json();
+      if (data.active) {
+        localStorage.setItem(SUBSCRIBED_KEY, "true");
+        setIsSubscribed(true);
+        setShowVerifyPayment(false);
+      } else {
+        setVerifyError("No active subscription found for this email. Please try again in a moment, or check your payment email.");
+      }
+    } catch {
+      setVerifyError("Verification failed. Please try again.");
+    } finally {
+      setVerifyingPayment(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -246,6 +275,44 @@ export default function Home() {
           loading={subscribing}
           bonusUsed={bonusUsed}
         />
+      )}
+
+      {showVerifyPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
+            <div className="text-center mb-4">
+              <div className="text-3xl mb-2">✅</div>
+              <h2 className="text-xl font-bold text-gray-900">Payment Successful!</h2>
+              <p className="text-gray-500 text-sm mt-1">Enter your payment email to activate your subscription.</p>
+            </div>
+            <div className="space-y-3">
+              <input
+                type="email"
+                placeholder="Email used on Stripe"
+                value={verifyEmail}
+                onChange={(e) => setVerifyEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleVerifyPayment()}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+              {verifyError && (
+                <p className="text-red-500 text-xs text-center">{verifyError}</p>
+              )}
+              <button
+                onClick={handleVerifyPayment}
+                disabled={verifyingPayment || !verifyEmail.trim()}
+                className="w-full py-2.5 bg-pink-500 text-white rounded-xl text-sm font-medium hover:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {verifyingPayment ? "Verifying..." : "Activate Subscription"}
+              </button>
+              <button
+                onClick={() => setShowVerifyPayment(false)}
+                className="w-full py-2 text-gray-400 text-sm hover:text-gray-600"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Header */}
